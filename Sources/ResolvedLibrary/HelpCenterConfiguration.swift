@@ -52,7 +52,7 @@ public struct HelpCenterConfiguration {
         shouldRetry: Bool = true,
         maxRetries: Int = 3,
         enableOfflineQueue: Bool = true,
-        loggingEnabled: Bool = true
+        loggingEnabled: Bool = false
     ) {
         self.apiKey = apiKey
         self.baseURL = baseURL
