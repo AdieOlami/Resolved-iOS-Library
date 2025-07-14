@@ -126,7 +126,7 @@ public class ResolvedSDKManager: ObservableObject {
                 await MainActor.run {
                     self.faqError = error.localizedDescription
                     self.isLoadingFAQs = false
-                    fatalError(error.localizedDescription)
+                    fatalError("\(error)")
                 }
             }
         }
