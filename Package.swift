@@ -16,11 +16,11 @@ let package = Package(
         .target(
             name: "ResolvedLibrary",
             dependencies: ["Resolved"],
-            path: "Sources/ResolvedLibrary"
+            path: "./Sources/ResolvedLibrary"
         ),
         .binaryTarget(
             name: "Resolved",
-            path: "Sources/Resolved.xcframework"
+            path: "./Sources/Resolved.xcframework"
         ),
     ]
 )
