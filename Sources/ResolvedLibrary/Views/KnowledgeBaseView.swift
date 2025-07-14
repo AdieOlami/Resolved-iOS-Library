@@ -40,6 +40,9 @@ struct KnowledgeBaseView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
                 }
+                .refreshable {
+                    await refreshKnowledgeBase()
+                }
             }
             .frame(width: 400)
             .background(sidebarBackgroundColor)
@@ -253,6 +256,34 @@ struct KnowledgeBaseView: View {
     }
     
     // MARK: - Helper Methods
+    
+    @MainActor
+    private func refreshKnowledgeBase() async {
+        if isSearching {
+            // Refresh search results
+            await performSearchRefresh()
+        } else {
+            // Refresh collections
+            sdkManager.loadCollections()
+            
+            // Wait for completion
+            while sdkManager.isLoadingCollections {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+        }
+    }
+
+    @MainActor
+    private func performSearchRefresh() async {
+        guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        sdkManager.searchArticles(query: searchQuery)
+        
+        while sdkManager.isLoadingArticles {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+    
     private func performSearch() {
         guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             isSearching = false

@@ -79,37 +79,42 @@ public struct ResolvedHelpCenterView: View {
     
     // MARK: - Home View
     private var homeView: some View {
-        VStack(spacing: 32) {
-            // Hero Section
-            HeroSectionView(
-                configuration: configuration,
-                searchQuery: $searchQuery,
-                isSearching: $isSearching,
-                onSearch: handleSearch
-            )
-            
-            // Action Cards
-            if shouldShowActionCards {
-                ActionCardsView(
+        ScrollView {
+            VStack(spacing: 32) {
+                // Hero Section
+                HeroSectionView(
                     configuration: configuration,
-                    onNavigate: { view in
-                        activeView = view
-                    }
+                    searchQuery: $searchQuery,
+                    isSearching: $isSearching,
+                    onSearch: handleSearch
                 )
+                
+                // Action Cards
+                if shouldShowActionCards {
+                    ActionCardsView(
+                        configuration: configuration,
+                        onNavigate: { view in
+                            activeView = view
+                        }
+                    )
+                }
+                
+                // FAQ Section
+                if configuration.includeFAQs && sdkManager.organization?.capabilities.contains("use_faq") == true {
+                    FAQSectionView(
+                        configuration: configuration,
+                        searchQuery: searchQuery,
+                        isSearching: isSearching,
+                        openFAQIndex: $openFAQIndex,
+                        sdkManager: sdkManager
+                    )
+                }
             }
-            
-            // FAQ Section
-            if configuration.includeFAQs && sdkManager.organization?.capabilities.contains("use_faq") == true {
-                FAQSectionView(
-                    configuration: configuration,
-                    searchQuery: searchQuery,
-                    isSearching: isSearching,
-                    openFAQIndex: $openFAQIndex,
-                    sdkManager: sdkManager
-                )
-            }
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
+        .refreshable {
+            await refreshMainContent()
+        }
     }
     
     private var shouldShowActionCards: Bool {
@@ -133,6 +138,22 @@ public struct ResolvedHelpCenterView: View {
         
         isSearching = true
         sdkManager.searchFAQs(query: searchQuery)
+    }
+    
+    @MainActor
+    private func refreshMainContent() async {
+        // Refresh organization capabilities
+        sdkManager.loadOrganization()
+        
+        // Refresh FAQs
+        if configuration.includeFAQs {
+            sdkManager.loadFAQs()
+        }
+        
+        // Wait for completion
+        while sdkManager.isLoadingFAQs || sdkManager.isLoadingOrganization {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+        }
     }
 }
 

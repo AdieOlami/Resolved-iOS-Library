@@ -342,3 +342,74 @@ public class ResolvedSDKManager: ObservableObject {
         articleError = nil
     }
 }
+
+extension ResolvedSDKManager {
+    
+    // MARK: - Refresh Methods
+    
+    /// Refresh all data
+    @MainActor
+    public func refreshAll() {
+        loadOrganization()
+        
+        if configuration?.includeFAQs == true {
+            loadFAQs()
+        }
+        
+        if configuration?.includeKnowledgeBase == true {
+            loadCollections()
+        }
+        
+        if configuration?.includeTickets == true && configuration?.customerId != nil {
+            loadTickets()
+        }
+    }
+    
+    /// Refresh FAQ data specifically
+    @MainActor
+    public func refreshFAQs() {
+        // Clear current data first for immediate UI feedback
+        faqError = nil
+        
+        loadFAQs()
+        
+        // If we have search results, refresh those too
+        if !searchedFAQs.isEmpty {
+            // Re-run the last search
+            // You'd need to store the last search query
+        }
+    }
+    
+    /// Refresh knowledge base data
+    @MainActor
+    public func refreshKnowledgeBase() {
+        collectionError = nil
+        articleError = nil
+        
+        loadCollections()
+    }
+    
+    /// Refresh tickets data
+    @MainActor
+    public func refreshTickets() {
+        ticketError = nil
+        loadTickets()
+    }
+    
+    /// Refresh specific ticket
+    @MainActor
+    public func refreshTicket(id: String) {
+        loadTicket(id: id)
+    }
+    
+    // MARK: - Loading State Helpers
+    
+    /// Check if any refresh operation is in progress
+    public var isRefreshing: Bool {
+        return isLoadingOrganization ||
+               isLoadingFAQs ||
+               isLoadingCollections ||
+               isLoadingArticles ||
+               isLoadingTickets
+    }
+}

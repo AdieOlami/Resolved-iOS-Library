@@ -39,6 +39,9 @@ struct TicketDetailView: View {
                     }
                     .padding(.bottom, activeTab == "conversation" ? 120 : 32)
                 }
+                .refreshable {
+                    await refreshTicketDetail()
+                }
                 
                 // Message input (only for conversation tab)
                 if activeTab == "conversation" {
@@ -248,6 +251,17 @@ struct TicketDetailView: View {
             .padding(.bottom, 20)
         }
         .background(messageInputContainerBackgroundColor)
+    }
+    
+    @MainActor
+    private func refreshTicketDetail() async {
+        // Refresh the current ticket details
+        sdkManager.loadTicket(id: ticketId)
+        
+        // Wait for ticket to load
+        while sdkManager.selectedTicket == nil && sdkManager.ticketError == nil {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
     }
     
     // MARK: - Computed Properties

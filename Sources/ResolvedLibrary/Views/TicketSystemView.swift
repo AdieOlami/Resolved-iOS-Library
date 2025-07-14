@@ -78,6 +78,9 @@ struct TicketSystemView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
                 }
+                .refreshable {
+                    await refreshTickets()
+                }
             }
             .frame(width: 400)
             .background(sidebarBackgroundColor)
@@ -241,6 +244,21 @@ struct TicketSystemView: View {
                     // Handle error (you might want to show an alert)
                 }
             }
+        }
+    }
+    
+    @MainActor
+    private func refreshTickets() async {
+        sdkManager.loadTickets()
+        
+        // Wait for tickets to load
+        while sdkManager.isLoadingTickets {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        
+        // If a ticket is selected, refresh its details too
+        if let selectedId = selectedTicketId {
+            sdkManager.loadTicket(id: selectedId)
         }
     }
     
