@@ -5,7 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "ResolvedLibrary",
-    platforms: [.iOS(.v15)], // Consider lowering to support more devices
+    platforms: [.iOS(.v17)], // Consider lowering to support more devices
     products: [
         .library(
             name: "ResolvedLibrary",
