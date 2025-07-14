@@ -40,7 +40,7 @@ struct ArticleDetailView: View {
                             }
                             
                             MetadataBadge(
-                                text: article.status.rawValue.capitalized,
+                                text: "Published",
                                 configuration: configuration
                             )
                         }
