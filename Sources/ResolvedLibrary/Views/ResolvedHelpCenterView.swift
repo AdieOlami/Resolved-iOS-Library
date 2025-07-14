@@ -33,40 +33,64 @@ public struct ResolvedHelpCenterView: View {
                 configuration.theme.backgroundColor
                     .ignoresSafeArea()
                 
-                VStack(spacing: 0) {
-                    // Back navigation (if not on home)
-                    if activeView != .home {
-                        BackNavigationView {
-                            activeView = .home
-                        }
-                        .padding(.horizontal)
-                    }
-                    
-                    // Main content
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            switch activeView {
-                            case .home:
-                                homeView
-                            case .knowledgeBase:
-                                KnowledgeBaseView(
-                                    configuration: configuration,
-                                    onBack: { activeView = .home }
-                                )
-                            case .tickets:
-                                TicketSystemView(
-                                    configuration: configuration,
-                                    userId: configuration.customerId ?? "",
-                                    onBack: { activeView = .home }
-                                )
-                            case .createTicket:
-                                CreateTicketView(
-                                    configuration: configuration,
-                                    userId: configuration.customerId ?? "",
-                                    onBack: { activeView = .home }
-                                )
+                if let organization = sdkManager.organization {
+                    if organization.capabilities.contains("use_sdk") {
+                        // Normal help center content
+                        VStack(spacing: 0) {
+                            // Back navigation (if not on home)
+                            if activeView != .home {
+                                BackNavigationView {
+                                    activeView = .home
+                                }
+                                .padding(.horizontal)
+                            }
+                            
+                            // Main content
+                            ScrollView {
+                                LazyVStack(spacing: 0) {
+                                    switch activeView {
+                                    case .home:
+                                        homeView
+                                    case .knowledgeBase:
+                                        KnowledgeBaseView(
+                                            configuration: configuration,
+                                            onBack: { activeView = .home }
+                                        )
+                                    case .tickets:
+                                        TicketSystemView(
+                                            configuration: configuration,
+                                            userId: configuration.customerId ?? "",
+                                            onBack: { activeView = .home }
+                                        )
+                                    case .createTicket:
+                                        CreateTicketView(
+                                            configuration: configuration,
+                                            userId: configuration.customerId ?? "",
+                                            onBack: { activeView = .home }
+                                        )
+                                    }
+                                }
                             }
                         }
+                    } else {
+                        // Service Unavailable with Pull-to-Refresh
+                        serviceUnavailableView
+                    }
+                } else if sdkManager.isLoadingOrganization {
+                    // Loading organization capabilities
+                    LoadingView(message: "Loading...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    // Error loading organization or no organization data
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            serviceUnavailableContent
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding()
+                    }
+                    .refreshable {
+                        await refreshOrganizationCapabilities()
                     }
                 }
             }
@@ -117,12 +141,163 @@ public struct ResolvedHelpCenterView: View {
         }
     }
     
+    private var serviceUnavailableView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                serviceUnavailableContent
+            }
+            .frame(maxWidth: .infinity)
+            .frame(minHeight: UIScreen.main.bounds.height - 200) // Ensure enough height for pull-to-refresh
+            .padding()
+        }
+        .refreshable {
+            await refreshOrganizationCapabilities()
+        }
+    }
+    
+    private var serviceUnavailableContent: some View {
+        VStack(spacing: 24) {
+            // Error Icon
+            ZStack {
+                Circle()
+                    .fill(errorIconBackgroundColor)
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(.red)
+            }
+            
+            // Error Content
+            VStack(spacing: 16) {
+                Text("Service Unavailable")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(configuration.theme.textColor)
+                    .multilineTextAlignment(.center)
+                
+                Text("The help center is temporarily unavailable. Please try again later or contact support directly.")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(configuration.theme.secondaryColor)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                
+                // Organization status info (if available)
+                if let organization = sdkManager.organization {
+                    VStack(spacing: 8) {
+                        Text("Account Status: \(organization.status)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(configuration.theme.secondaryColor)
+                        
+                        Text("Plan: \(organization.planName)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(configuration.theme.secondaryColor)
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(statusBackgroundColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(configuration.theme.borderColor.opacity(0.2), lineWidth: 1)
+                            )
+                    )
+                }
+                
+                // Error message (if any)
+                if let error = sdkManager.organizationError {
+                    Text("Error: \(error)")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.red.opacity(0.1))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.red.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                }
+                
+                // Retry Button
+                Button(action: {
+                    Task {
+                        await refreshOrganizationCapabilities()
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        if sdkManager.isLoadingOrganization {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        
+                        Text(sdkManager.isLoadingOrganization ? "Checking..." : "Try Again")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(configuration.theme.primaryColor)
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+                .disabled(sdkManager.isLoadingOrganization)
+                
+                // Pull to refresh hint
+                VStack(spacing: 4) {
+                    Image(systemName: "arrow.down")
+                        .font(.system(size: 12))
+                        .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
+                    
+                    Text("Pull down to refresh")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
+                }
+                .padding(.top, 16)
+            }
+        }
+        .padding(32)
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(unavailableBackgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(configuration.theme.borderColor.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+    
     private var shouldShowActionCards: Bool {
         let hasKB = configuration.includeKnowledgeBase && sdkManager.organization?.capabilities.contains("use_knowledgebase") == true
         let hasTickets = configuration.includeTickets && sdkManager.organization?.capabilities.contains("use_tickets") == true
         let hasCreate = configuration.includeCreateTicket && sdkManager.organization?.capabilities.contains("use_tickets") == true
         
         return hasKB || hasTickets || hasCreate
+    }
+    
+    // MARK: - Refresh Organization Capabilities
+    @MainActor
+    private func refreshOrganizationCapabilities() async {
+        // Clear any existing error
+        sdkManager.clearErrors()
+        
+        // Reload organization data
+        sdkManager.loadOrganization()
+        
+        // Wait for the operation to complete
+        while sdkManager.isLoadingOrganization {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+        }
+        
+        // Provide haptic feedback
+        let impact = UIImpactFeedbackGenerator(style: .medium)
+        impact.impactOccurred()
     }
     
     // MARK: - Helper Methods
@@ -154,6 +329,25 @@ public struct ResolvedHelpCenterView: View {
         while sdkManager.isLoadingFAQs || sdkManager.isLoadingOrganization {
             try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
         }
+    }
+    
+    // MARK: - Computed Properties for Service Unavailable
+    private var errorIconBackgroundColor: Color {
+        configuration.theme.mode == .dark
+        ? Color.red.opacity(0.2)
+        : Color.red.opacity(0.1)
+    }
+    
+    private var unavailableBackgroundColor: Color {
+        configuration.theme.mode == .dark
+        ? Color(.systemGray6).opacity(0.3)
+        : Color.white.opacity(0.8)
+    }
+    
+    private var statusBackgroundColor: Color {
+        configuration.theme.mode == .dark
+        ? Color(.systemGray5).opacity(0.3)
+        : Color(.systemGray6).opacity(0.5)
     }
 }
 
@@ -378,8 +572,8 @@ struct FAQSectionView: View {
                     EmptyStateView(
                         title: isSearching ? "No results found" : "No FAQs available",
                         message: isSearching
-                            ? "No results found for \"\(searchQuery)\". Try adjusting your search terms or browse our knowledge base."
-                            : "No frequently asked questions are available at the moment. Check back later or contact support for assistance.",
+                        ? "No results found for \"\(searchQuery)\". Try adjusting your search terms or browse our knowledge base."
+                        : "No frequently asked questions are available at the moment. Check back later or contact support for assistance.",
                         configuration: configuration
                     )
                     .padding(48)

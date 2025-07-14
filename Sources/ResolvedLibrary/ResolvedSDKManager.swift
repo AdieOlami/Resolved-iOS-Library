@@ -413,3 +413,59 @@ extension ResolvedSDKManager {
                isLoadingTickets
     }
 }
+
+extension ResolvedSDKManager {
+    
+    // MARK: - Capability Checks
+    
+    /// Check if the user has access to the SDK
+    public var hasSDKAccess: Bool {
+        return organization?.capabilities.contains("use_sdk") == true
+    }
+    
+    /// Check specific capability
+    public func hasCapability(_ capability: String) -> Bool {
+        return organization?.capabilities.contains(capability) == true
+    }
+    
+    /// Get all available capabilities
+    public var availableCapabilities: [String] {
+        return organization?.capabilities ?? []
+    }
+    
+    /// Refresh organization capabilities specifically
+    @MainActor
+    public func refreshCapabilities() async {
+        organizationError = nil
+        isLoadingOrganization = true
+        
+        loadOrganization()
+        
+        // Wait for completion
+        while isLoadingOrganization {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+    
+    /// Check if the organization is in a valid state
+    public var isOrganizationValid: Bool {
+        guard let org = organization else { return false }
+        return org.status.lowercased() == "active"
+    }
+    
+    /// Get user-friendly capability descriptions
+    public func getCapabilityDescription(_ capability: String) -> String {
+        switch capability {
+        case "use_sdk":
+            return "Access to Help Center SDK"
+        case "use_knowledgebase":
+            return "Knowledge Base Access"
+        case "use_tickets":
+            return "Support Tickets"
+        case "use_faq":
+            return "Frequently Asked Questions"
+        default:
+            return capability.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+}
