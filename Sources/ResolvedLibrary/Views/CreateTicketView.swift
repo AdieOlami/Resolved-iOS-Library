@@ -9,6 +9,7 @@ import SwiftUI
 @_exported import Resolved
 
 // MARK: - Create Ticket View
+
 struct CreateTicketView: View {
     let configuration: HelpCenterConfiguration
     let userId: String
