@@ -26,6 +26,208 @@ public protocol RequestProtocol {
   var cachePolicy: Foundation.URLRequest.CachePolicy { get }
   var allowOfflineQueuing: Swift.Bool { get }
 }
+public struct ResolvedSDKConfiguration {
+  public let baseURL: Foundation.URL
+  public let apiKey: Swift.String
+  public let enableOfflineQueue: Swift.Bool
+  public let loggingEnabled: Swift.Bool
+  public let timeoutInterval: Foundation.TimeInterval
+  public let shouldRetry: Swift.Bool
+  public let maxRetries: Swift.Int
+  public init(baseURL: Foundation.URL, apiKey: Swift.String, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false, timeoutInterval: Foundation.TimeInterval = 30.0, shouldRetry: Swift.Bool = true, maxRetries: Swift.Int = 3)
+  public init(apiKey: Swift.String, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false, timeoutInterval: Foundation.TimeInterval = 30.0, shouldRetry: Swift.Bool = true, maxRetries: Swift.Int = 3)
+}
+public struct NetworkConfiguration {
+  public init(baseURL: Foundation.URL, apiKey: Swift.String, defaultHeaders: [Swift.String : Swift.String] = [:], timeoutInterval: Foundation.TimeInterval = 30.0, shouldRetry: Swift.Bool = true, maxRetries: Swift.Int = 3, retryInterval: Foundation.TimeInterval = 1.0, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false)
+}
+public struct Collection : Swift.Codable {
+  public let id: Swift.String
+  public let refId: Swift.String
+  public let organizationId: Swift.String
+  public let name: Swift.String
+  public let description: Swift.String?
+  public let parentId: Swift.String?
+  public let slug: Swift.String
+  public let subCollections: [Resolved.Collection]?
+  public let articles: [Resolved.Article]?
+  public let order: Swift.Int
+  public let authorId: Swift.String
+  public let author: Resolved.User?
+  public let status: Resolved.ArticleStatus
+  public let createdAt: Swift.String
+  public let updatedAt: Swift.String
+  public init(id: Swift.String, refId: Swift.String, organizationId: Swift.String, name: Swift.String, description: Swift.String?, parentId: Swift.String?, slug: Swift.String, subCollections: [Resolved.Collection]?, articles: [Resolved.Article]?, order: Swift.Int, authorId: Swift.String, author: Resolved.User?, status: Resolved.ArticleStatus, createdAt: Swift.String, updatedAt: Swift.String)
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct SearchParams {
+  public let query: Swift.String
+  public let collectionId: Swift.String?
+  public let tags: [Swift.String]?
+  public let page: Swift.Int?
+  public let limit: Swift.Int?
+  public init(query: Swift.String, collectionId: Swift.String? = nil, tags: [Swift.String]? = nil, page: Swift.Int? = nil, limit: Swift.Int? = nil)
+}
+public struct CollectionListParams {
+  public let parentId: Swift.String?
+  public let includeArticleCounts: Swift.Bool?
+  public init(parentId: Swift.String? = nil, includeArticleCounts: Swift.Bool? = nil)
+}
+final public class KnowledgeBaseService : Resolved.KnowledgeBaseProtocol {
+  public init(networkClient: any Resolved.NetworkClientProtocol)
+  final public func getCollections(params: Resolved.CollectionListParams?, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Collection]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  final public func getArticles(params: Resolved.ArticleListParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  final public func getArticle(id: Swift.String, completion: @escaping (Swift.Result<Resolved.Article, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  final public func searchArticles(params: Resolved.SearchParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  final public func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating, completion: @escaping (Swift.Result<Swift.Void, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  @available(iOS 13.0, *)
+  final public func getCollections(params: Resolved.CollectionListParams?) async throws -> Resolved.ApiResponse<[Resolved.Collection]>
+  @available(iOS 13.0, *)
+  final public func getArticles(params: Resolved.ArticleListParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
+  @available(iOS 13.0, *)
+  final public func getArticle(id: Swift.String) async throws -> Resolved.Article
+  @available(iOS 13.0, *)
+  final public func searchArticles(params: Resolved.SearchParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
+  @available(iOS 13.0, *)
+  final public func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating) async throws
+  @objc deinit
+}
+public class LoggingInterceptor : Resolved.RequestInterceptor, Resolved.ResponseInterceptor {
+  public init(logger: any Resolved.NetworkLoggerProtocol)
+  public func intercept(_ request: Foundation.URLRequest) -> Foundation.URLRequest
+  public func intercept(data: Foundation.Data?, response: Foundation.URLResponse?, error: (any Swift.Error)?) -> (Foundation.Data?, Foundation.URLResponse?, (any Swift.Error)?)
+  @objc deinit
+}
+public enum HTTPMethod : Swift.String {
+  case get
+  case post
+  case put
+  case patch
+  case delete
+  public init?(rawValue: Swift.String)
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public struct AnyCodable : Swift.Codable {
+  public let value: Any
+  public init<T>(_ value: T?)
+}
+extension Resolved.AnyCodable : Swift.ExpressibleByNilLiteral {
+  public init(nilLiteral _: ())
+}
+extension Resolved.AnyCodable : Swift.ExpressibleByBooleanLiteral {
+  public init(booleanLiteral value: Swift.Bool)
+  public typealias BooleanLiteralType = Swift.Bool
+}
+extension Resolved.AnyCodable : Swift.ExpressibleByIntegerLiteral {
+  public init(integerLiteral value: Swift.Int)
+  public typealias IntegerLiteralType = Swift.Int
+}
+extension Resolved.AnyCodable : Swift.ExpressibleByFloatLiteral {
+  public init(floatLiteral value: Swift.Double)
+  public typealias FloatLiteralType = Swift.Double
+}
+extension Resolved.AnyCodable : Swift.ExpressibleByStringLiteral {
+  public init(stringLiteral value: Swift.String)
+  public typealias ExtendedGraphemeClusterLiteralType = Swift.String
+  public typealias StringLiteralType = Swift.String
+  public typealias UnicodeScalarLiteralType = Swift.String
+}
+extension Resolved.AnyCodable : Swift.ExpressibleByArrayLiteral {
+  public init(arrayLiteral elements: Any...)
+  public typealias ArrayLiteralElement = Any
+}
+extension Resolved.AnyCodable : Swift.ExpressibleByDictionaryLiteral {
+  public init(dictionaryLiteral elements: (Swift.AnyHashable, Any)...)
+  public typealias Key = Swift.AnyHashable
+  public typealias Value = Any
+}
+extension Resolved.AnyCodable {
+  public init(from decoder: any Swift.Decoder) throws
+  public func encode(to encoder: any Swift.Encoder) throws
+}
+public enum ContentType : Swift.String {
+  case json
+  case formURLEncoded
+  case multipartFormData
+  case textPlain
+  public init?(rawValue: Swift.String)
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public protocol NetworkMonitorProtocol {
+  var isConnected: Swift.Bool { get }
+  func startMonitoring()
+  func stopMonitoring()
+  func addListener(_ listener: @escaping (Swift.Bool) -> Swift.Void) -> Foundation.UUID
+  func removeListener(_ id: Foundation.UUID)
+}
+public enum OrganizationStatus : Swift.String, Swift.Codable {
+  case active
+  case inactive
+  case blocked
+  public init?(rawValue: Swift.String)
+  public typealias RawValue = Swift.String
+  public var rawValue: Swift.String {
+    get
+  }
+}
+public struct OrganizationSettings : Swift.Codable {
+  public let supportEmail: Swift.String?
+  public let businessHours: Swift.String?
+  public let timeZone: Swift.String?
+  public let logoUrl: Swift.String?
+  public init(supportEmail: Swift.String? = nil, businessHours: Swift.String? = nil, timeZone: Swift.String? = nil, logoUrl: Swift.String? = nil)
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct PlanLimits : Swift.Codable {
+  public init()
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public struct Organization : Swift.Codable {
+  public let organizationId: Swift.String
+  public let planName: Swift.String
+  public let tier: Swift.String
+  public let status: Swift.String
+  public let capabilities: [Swift.String]
+  public let limits: Resolved.PlanLimits
+  public let features: [Swift.String]
+  public init(organizationId: Swift.String, planName: Swift.String, tier: Swift.String, status: Swift.String, capabilities: [Swift.String], limits: Resolved.PlanLimits, features: [Swift.String])
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
+}
+public protocol FAQProtocol {
+  func getFAQs(params: Resolved.FAQListParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.FAQ]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  func getFAQ(id: Swift.String, completion: @escaping (Swift.Result<Resolved.FAQ, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  func searchFAQs(params: Resolved.FAQSearchParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.FAQ]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  func recordView(faqId: Swift.String, completion: @escaping (Swift.Result<Swift.Void, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  @available(iOS 13.0, *)
+  func getFAQs(params: Resolved.FAQListParams) async throws -> Resolved.ApiResponse<[Resolved.FAQ]>
+  @available(iOS 13.0, *)
+  func getFAQ(id: Swift.String) async throws -> Resolved.FAQ
+  @available(iOS 13.0, *)
+  func searchFAQs(params: Resolved.FAQSearchParams) async throws -> Resolved.ApiResponse<[Resolved.FAQ]>
+  @available(iOS 13.0, *)
+  func recordView(faqId: Swift.String) async throws
+}
+final public class ResolvedSDKLogger : Resolved.NetworkLoggerProtocol {
+  final public let isEnabled: Swift.Bool
+  public init(enabled: Swift.Bool, subsystem: Swift.String = "com.resolved.sdk", category: Swift.String = "networking")
+  final public func log(message: Swift.String)
+  @objc deinit
+}
+public class NetworkLogger : Resolved.NetworkLoggerProtocol {
+  final public let isEnabled: Swift.Bool
+  public init(enabled: Swift.Bool)
+  public func log(message: Swift.String)
+  @objc deinit
+}
 public enum FAQStatus : Swift.String, Swift.Codable {
   case draft
   case published
@@ -75,47 +277,50 @@ public struct FAQSearchParams {
   public let limit: Swift.Int?
   public init(query: Swift.String, category: Swift.String? = nil, tags: [Swift.String]? = nil, page: Swift.Int? = nil, limit: Swift.Int? = nil)
 }
-public struct ResolvedSDKConfiguration {
-  public let baseURL: Foundation.URL
-  public let apiKey: Swift.String
-  public let enableOfflineQueue: Swift.Bool
-  public let loggingEnabled: Swift.Bool
-  public let timeoutInterval: Foundation.TimeInterval
-  public let shouldRetry: Swift.Bool
-  public let maxRetries: Swift.Int
-  public init(baseURL: Foundation.URL, apiKey: Swift.String, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false, timeoutInterval: Foundation.TimeInterval = 30.0, shouldRetry: Swift.Bool = true, maxRetries: Swift.Int = 3)
-  public init(apiKey: Swift.String, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false, timeoutInterval: Foundation.TimeInterval = 30.0, shouldRetry: Swift.Bool = true, maxRetries: Swift.Int = 3)
+public protocol RequestBuilderProtocol {
+  func buildURLRequest<R>(from request: R, baseURL: Foundation.URL, defaultHeaders: [Swift.String : Swift.String], timeoutInterval: Foundation.TimeInterval) throws -> Foundation.URLRequest where R : Resolved.RequestProtocol
 }
-public struct NetworkConfiguration {
-  public init(baseURL: Foundation.URL, apiKey: Swift.String, defaultHeaders: [Swift.String : Swift.String] = [:], timeoutInterval: Foundation.TimeInterval = 30.0, shouldRetry: Swift.Bool = true, maxRetries: Swift.Int = 3, retryInterval: Foundation.TimeInterval = 1.0, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false)
-}
-public enum CachePolicy {
-  case networkOnly
-  case cacheOnly
-  case cacheAndNetwork
-  case cacheElseNetwork(maxAge: Foundation.TimeInterval)
-}
-public protocol RequestInterceptor {
-  func intercept(_ request: Foundation.URLRequest) -> Foundation.URLRequest
-}
-final public class KnowledgeBaseService : Resolved.KnowledgeBaseProtocol {
-  public init(networkClient: any Resolved.NetworkClientProtocol)
-  final public func getCollections(params: Resolved.CollectionListParams?, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Collection]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  final public func getArticles(params: Resolved.ArticleListParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  final public func getArticle(id: Swift.String, completion: @escaping (Swift.Result<Resolved.Article, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  final public func searchArticles(params: Resolved.SearchParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  final public func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating, completion: @escaping (Swift.Result<Swift.Void, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+final public class ResolvedSDK {
+  final public let networkClient: any Resolved.NetworkClientProtocol
+  final public let faq: any Resolved.FAQProtocol
+  final public let knowledgeBase: any Resolved.KnowledgeBaseProtocol
+  final public let ticketing: any Resolved.TicketingProtocol
+  final public var organization: Resolved.Organization? {
+    get
+  }
+  public init(configuration: Resolved.ResolvedSDKConfiguration)
+  convenience public init(apiKey: Swift.String)
+  final public func getCurrentOrganization(completion: @escaping (Swift.Result<Resolved.Organization, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
   @available(iOS 13.0, *)
-  final public func getCollections(params: Resolved.CollectionListParams?) async throws -> Resolved.ApiResponse<[Resolved.Collection]>
-  @available(iOS 13.0, *)
-  final public func getArticles(params: Resolved.ArticleListParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
-  @available(iOS 13.0, *)
-  final public func getArticle(id: Swift.String) async throws -> Resolved.Article
-  @available(iOS 13.0, *)
-  final public func searchArticles(params: Resolved.SearchParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
-  @available(iOS 13.0, *)
-  final public func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating) async throws
+  final public func getCurrentOrganization() async throws -> Resolved.Organization
+  final public func cancelAllRequests()
   @objc deinit
+}
+public protocol ResponseInterceptor {
+  func intercept(data: Foundation.Data?, response: Foundation.URLResponse?, error: (any Swift.Error)?) -> (Foundation.Data?, Foundation.URLResponse?, (any Swift.Error)?)
+}
+public protocol NetworkClientProtocol {
+  func perform<T, R>(request: R, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
+  func performWithoutDecoding<R>(request: R, completion: @escaping (Swift.Result<Foundation.Data?, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
+  func performRaw<R>(request: R, completion: @escaping (Swift.Result<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
+  func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func perform<T, R>(request: R, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func performWithoutDecoding<R>(request: R) async throws -> Foundation.Data? where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func performRaw<R>(request: R) async throws -> (Foundation.Data, Foundation.HTTPURLResponse) where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func performPublisher<T, R>(request: R, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func performWithoutDecodingPublisher<R>(request: R) -> Combine.AnyPublisher<Foundation.Data?, Resolved.NetworkError> where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func performRawPublisher<R>(request: R) -> Combine.AnyPublisher<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError> where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  func uploadFilePublisher<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
+  func cancelAllRequests()
 }
 public struct Article : Swift.Codable {
   public let id: Swift.String
@@ -182,127 +387,8 @@ public struct ArticleListParams {
   public let sortOrder: Swift.String?
   public init(collectionId: Swift.String? = nil, status: [Resolved.ArticleStatus]? = nil, tags: [Swift.String]? = nil, page: Swift.Int? = nil, limit: Swift.Int? = nil, sortBy: Swift.String? = nil, sortOrder: Swift.String? = nil)
 }
-public enum OrganizationStatus : Swift.String, Swift.Codable {
-  case active
-  case inactive
-  case blocked
-  public init?(rawValue: Swift.String)
-  public typealias RawValue = Swift.String
-  public var rawValue: Swift.String {
-    get
-  }
-}
-public struct OrganizationSettings : Swift.Codable {
-  public let supportEmail: Swift.String?
-  public let businessHours: Swift.String?
-  public let timeZone: Swift.String?
-  public let logoUrl: Swift.String?
-  public init(supportEmail: Swift.String? = nil, businessHours: Swift.String? = nil, timeZone: Swift.String? = nil, logoUrl: Swift.String? = nil)
-  public func encode(to encoder: any Swift.Encoder) throws
-  public init(from decoder: any Swift.Decoder) throws
-}
-public struct PlanLimits : Swift.Codable {
-  public init()
-  public func encode(to encoder: any Swift.Encoder) throws
-  public init(from decoder: any Swift.Decoder) throws
-}
-public struct Organization : Swift.Codable {
-  public let organizationId: Swift.String
-  public let planName: Swift.String
-  public let tier: Swift.String
-  public let status: Swift.String
-  public let capabilities: [Swift.String]
-  public let limits: Resolved.PlanLimits
-  public let features: [Swift.String]
-  public init(organizationId: Swift.String, planName: Swift.String, tier: Swift.String, status: Swift.String, capabilities: [Swift.String], limits: Resolved.PlanLimits, features: [Swift.String])
-  public func encode(to encoder: any Swift.Encoder) throws
-  public init(from decoder: any Swift.Decoder) throws
-}
-public enum HTTPMethod : Swift.String {
-  case get
-  case post
-  case put
-  case patch
-  case delete
-  public init?(rawValue: Swift.String)
-  public typealias RawValue = Swift.String
-  public var rawValue: Swift.String {
-    get
-  }
-}
-extension Foundation.URLSessionTask : Resolved.RCancellable {
-  public var isCancelled: Swift.Bool {
-    get
-  }
-}
-public enum ContentType : Swift.String {
-  case json
-  case formURLEncoded
-  case multipartFormData
-  case textPlain
-  public init?(rawValue: Swift.String)
-  public typealias RawValue = Swift.String
-  public var rawValue: Swift.String {
-    get
-  }
-}
-public protocol NetworkMonitorProtocol {
-  var isConnected: Swift.Bool { get }
-  func startMonitoring()
-  func stopMonitoring()
-  func addListener(_ listener: @escaping (Swift.Bool) -> Swift.Void) -> Foundation.UUID
-  func removeListener(_ id: Foundation.UUID)
-}
-@objc public class CertificatePinningValidator : ObjectiveC.NSObject, Foundation.URLSessionDelegate {
-  public init(certificates: [Foundation.Data], validateHost: Swift.Bool = true)
-  convenience public init(certificateNames: [Swift.String], in bundle: Foundation.Bundle = .main, validateHost: Swift.Bool = true)
-  @objc public func urlSession(_ session: Foundation.URLSession, didReceive challenge: Foundation.URLAuthenticationChallenge, completionHandler: @escaping (Foundation.URLSession.AuthChallengeDisposition, Foundation.URLCredential?) -> Swift.Void)
-  @objc deinit
-}
-public protocol FAQProtocol {
-  func getFAQs(params: Resolved.FAQListParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.FAQ]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  func getFAQ(id: Swift.String, completion: @escaping (Swift.Result<Resolved.FAQ, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  func searchFAQs(params: Resolved.FAQSearchParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.FAQ]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  func recordView(faqId: Swift.String, completion: @escaping (Swift.Result<Swift.Void, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  @available(iOS 13.0, *)
-  func getFAQs(params: Resolved.FAQListParams) async throws -> Resolved.ApiResponse<[Resolved.FAQ]>
-  @available(iOS 13.0, *)
-  func getFAQ(id: Swift.String) async throws -> Resolved.FAQ
-  @available(iOS 13.0, *)
-  func searchFAQs(params: Resolved.FAQSearchParams) async throws -> Resolved.ApiResponse<[Resolved.FAQ]>
-  @available(iOS 13.0, *)
-  func recordView(faqId: Swift.String) async throws
-}
-final public class ResolvedSDKLogger : Resolved.NetworkLoggerProtocol {
-  final public let isEnabled: Swift.Bool
-  public init(enabled: Swift.Bool, subsystem: Swift.String = "com.resolved.sdk", category: Swift.String = "networking")
-  final public func log(message: Swift.String)
-  @objc deinit
-}
-public class NetworkLogger : Resolved.NetworkLoggerProtocol {
-  final public let isEnabled: Swift.Bool
-  public init(enabled: Swift.Bool)
-  public func log(message: Swift.String)
-  @objc deinit
-}
-public protocol RequestBuilderProtocol {
-  func buildURLRequest<R>(from request: R, baseURL: Foundation.URL, defaultHeaders: [Swift.String : Swift.String], timeoutInterval: Foundation.TimeInterval) throws -> Foundation.URLRequest where R : Resolved.RequestProtocol
-}
-final public class ResolvedSDK {
-  final public let networkClient: any Resolved.NetworkClientProtocol
-  final public let faq: any Resolved.FAQProtocol
-  final public let knowledgeBase: any Resolved.KnowledgeBaseProtocol
-  final public let ticketing: any Resolved.TicketingProtocol
-  final public var organization: Resolved.Organization? {
-    get
-  }
-  public init(configuration: Resolved.ResolvedSDKConfiguration)
-  convenience public init(apiKey: Swift.String)
-  final public func getCurrentOrganization(completion: @escaping (Swift.Result<Resolved.Organization, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  @available(iOS 13.0, *)
-  final public func getCurrentOrganization() async throws -> Resolved.Organization
-  final public func cancelAllRequests()
-  @objc deinit
+public protocol EmptyResponseInitializable {
+  static func initFromEmptyResponse() -> Self?
 }
 public struct User : Swift.Codable {
   public let id: Swift.String
@@ -312,72 +398,6 @@ public struct User : Swift.Codable {
   public init(id: Swift.String, name: Swift.String, email: Swift.String? = nil, avatarUrl: Swift.String? = nil)
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
-}
-public protocol NetworkClientProtocol {
-  func perform<T, R>(request: R, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
-  func performWithoutDecoding<R>(request: R, completion: @escaping (Swift.Result<Foundation.Data?, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
-  func performRaw<R>(request: R, completion: @escaping (Swift.Result<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
-  func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func perform<T, R>(request: R, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func performWithoutDecoding<R>(request: R) async throws -> Foundation.Data? where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func performRaw<R>(request: R) async throws -> (Foundation.Data, Foundation.HTTPURLResponse) where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func performPublisher<T, R>(request: R, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func performWithoutDecodingPublisher<R>(request: R) -> Combine.AnyPublisher<Foundation.Data?, Resolved.NetworkError> where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func performRawPublisher<R>(request: R) -> Combine.AnyPublisher<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError> where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  func uploadFilePublisher<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
-  func cancelAllRequests()
-}
-public class LoggingInterceptor : Resolved.RequestInterceptor, Resolved.ResponseInterceptor {
-  public init(logger: any Resolved.NetworkLoggerProtocol)
-  public func intercept(_ request: Foundation.URLRequest) -> Foundation.URLRequest
-  public func intercept(data: Foundation.Data?, response: Foundation.URLResponse?, error: (any Swift.Error)?) -> (Foundation.Data?, Foundation.URLResponse?, (any Swift.Error)?)
-  @objc deinit
-}
-public struct ApiResponse<T> : Swift.Codable where T : Swift.Decodable, T : Swift.Encodable {
-  public let success: Swift.Bool
-  public let data: T?
-  public let pagination: Resolved.Pagination?
-  public init(success: Swift.Bool, data: T?, pagination: Resolved.Pagination? = nil)
-  public func encode(to encoder: any Swift.Encoder) throws
-  public init(from decoder: any Swift.Decoder) throws
-}
-public struct Pagination : Swift.Codable {
-  public let total: Swift.Int
-  public let page: Swift.Int
-  public let pageSize: Swift.Int
-  public init(total: Swift.Int, page: Swift.Int, pageSize: Swift.Int)
-  public func encode(to encoder: any Swift.Encoder) throws
-  public init(from decoder: any Swift.Decoder) throws
-}
-extension Swift.Result where Success : Swift.Decodable, Success : Swift.Encodable, Failure == Resolved.NetworkError {
-  public func mapSuccess<NewSuccess>(_ transform: (Success) -> NewSuccess) -> Swift.Result<NewSuccess, Failure>
-  public func handle(success: (Success) -> Swift.Void, failure: (Resolved.NetworkError) -> Swift.Void)
-}
-extension Resolved.ApiResponse {
-  public var hasMorePages: Swift.Bool {
-    get
-  }
-  public var nextPage: Swift.Int? {
-    get
-  }
-  public var previousPage: Swift.Int? {
-    get
-  }
-  public var totalPages: Swift.Int {
-    get
-  }
-}
-public protocol EmptyResponseInitializable {
-  static func initFromEmptyResponse() -> Self?
 }
 final public class FAQService : Resolved.FAQProtocol {
   public init(networkClient: any Resolved.NetworkClientProtocol)
@@ -517,41 +537,101 @@ public class RequestBuilder : Resolved.RequestBuilderProtocol {
   public func buildURLRequest<R>(from request: R, baseURL: Foundation.URL, defaultHeaders: [Swift.String : Swift.String], timeoutInterval: Foundation.TimeInterval) throws -> Foundation.URLRequest where R : Resolved.RequestProtocol
   @objc deinit
 }
-public protocol ResponseInterceptor {
-  func intercept(data: Foundation.Data?, response: Foundation.URLResponse?, error: (any Swift.Error)?) -> (Foundation.Data?, Foundation.URLResponse?, (any Swift.Error)?)
+public enum CachePolicy {
+  case networkOnly
+  case cacheOnly
+  case cacheAndNetwork
+  case cacheElseNetwork(maxAge: Foundation.TimeInterval)
 }
-public struct Collection : Swift.Codable {
-  public let id: Swift.String
-  public let refId: Swift.String
-  public let organizationId: Swift.String
-  public let name: Swift.String
-  public let description: Swift.String?
-  public let parentId: Swift.String?
-  public let slug: Swift.String
-  public let subCollections: [Resolved.Collection]?
-  public let articles: [Resolved.Article]?
-  public let order: Swift.Int
-  public let authorId: Swift.String
-  public let author: Resolved.User?
-  public let status: Resolved.ArticleStatus
-  public let createdAt: Swift.String
-  public let updatedAt: Swift.String
-  public init(id: Swift.String, refId: Swift.String, organizationId: Swift.String, name: Swift.String, description: Swift.String?, parentId: Swift.String?, slug: Swift.String, subCollections: [Resolved.Collection]?, articles: [Resolved.Article]?, order: Swift.Int, authorId: Swift.String, author: Resolved.User?, status: Resolved.ArticleStatus, createdAt: Swift.String, updatedAt: Swift.String)
+public protocol RequestInterceptor {
+  func intercept(_ request: Foundation.URLRequest) -> Foundation.URLRequest
+}
+public class NetworkClient : Resolved.NetworkClientProtocol {
+  public init(configuration: Resolved.NetworkConfiguration, session: Foundation.URLSession? = nil, requestBuilder: (any Resolved.RequestBuilderProtocol)? = nil, networkMonitor: (any Resolved.NetworkMonitorProtocol)? = nil, jsonDecoder: Foundation.JSONDecoder? = nil, logger: (any Resolved.NetworkLoggerProtocol)? = nil)
+  convenience public init(baseURL: Foundation.URL, apiKey: Swift.String, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false)
+  public func perform<T, R>(request: R, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
+  public func performWithoutDecoding<R>(request: R, completion: @escaping (Swift.Result<Foundation.Data?, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
+  public func performRaw<R>(request: R, completion: @escaping (Swift.Result<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
+  public func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
+  public func cancelAllRequests()
+  @available(iOS 13.0, *)
+  public func perform<T, R>(request: R, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func performWithoutDecoding<R>(request: R) async throws -> Foundation.Data? where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func performRaw<R>(request: R) async throws -> (Foundation.Data, Foundation.HTTPURLResponse) where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func performPublisher<T, R>(request: R, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func performWithoutDecodingPublisher<R>(request: R) -> Combine.AnyPublisher<Foundation.Data?, Resolved.NetworkError> where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func performRawPublisher<R>(request: R) -> Combine.AnyPublisher<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError> where R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func uploadFilePublisher<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
+  @objc deinit
+}
+extension Resolved.NetworkClient {
+  public func performCached<T, R>(request: R, responseType: T.Type, cachePolicy: Resolved.CachePolicy, cacheTTL: Foundation.TimeInterval = 3600, completion: @escaping (Swift.Result<T, Resolved.NetworkError>, Swift.Bool) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, T : Swift.Encodable, R : Resolved.RequestProtocol
+  @available(iOS 13.0, *)
+  public func performCached<T, R>(request: R, responseType: T.Type, cachePolicy: Resolved.CachePolicy, cacheTTL: Foundation.TimeInterval = 3600) async throws -> (T, Swift.Bool) where T : Swift.Decodable, T : Swift.Encodable, R : Resolved.RequestProtocol
+}
+public struct ApiResponse<T> : Swift.Codable where T : Swift.Decodable, T : Swift.Encodable {
+  public let success: Swift.Bool
+  public let data: T?
+  public let pagination: Resolved.Pagination?
+  public init(success: Swift.Bool, data: T?, pagination: Resolved.Pagination? = nil)
   public func encode(to encoder: any Swift.Encoder) throws
   public init(from decoder: any Swift.Decoder) throws
 }
-public struct SearchParams {
-  public let query: Swift.String
-  public let collectionId: Swift.String?
-  public let tags: [Swift.String]?
-  public let page: Swift.Int?
-  public let limit: Swift.Int?
-  public init(query: Swift.String, collectionId: Swift.String? = nil, tags: [Swift.String]? = nil, page: Swift.Int? = nil, limit: Swift.Int? = nil)
+public struct Pagination : Swift.Codable {
+  public let total: Swift.Int
+  public let page: Swift.Int
+  public let limit: Swift.Int
+  public init(total: Swift.Int, page: Swift.Int, limit: Swift.Int)
+  public func encode(to encoder: any Swift.Encoder) throws
+  public init(from decoder: any Swift.Decoder) throws
 }
-public struct CollectionListParams {
-  public let parentId: Swift.String?
-  public let includeArticleCounts: Swift.Bool?
-  public init(parentId: Swift.String? = nil, includeArticleCounts: Swift.Bool? = nil)
+extension Swift.Result where Success : Swift.Decodable, Success : Swift.Encodable, Failure == Resolved.NetworkError {
+  public func mapSuccess<NewSuccess>(_ transform: (Success) -> NewSuccess) -> Swift.Result<NewSuccess, Failure>
+  public func handle(success: (Success) -> Swift.Void, failure: (Resolved.NetworkError) -> Swift.Void)
+}
+extension Resolved.ApiResponse {
+  public var hasMorePages: Swift.Bool {
+    get
+  }
+  public var nextPage: Swift.Int? {
+    get
+  }
+  public var previousPage: Swift.Int? {
+    get
+  }
+  public var totalPages: Swift.Int {
+    get
+  }
+}
+public protocol KnowledgeBaseProtocol {
+  func getCollections(params: Resolved.CollectionListParams?, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Collection]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  func getArticles(params: Resolved.ArticleListParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  func getArticle(id: Swift.String, completion: @escaping (Swift.Result<Resolved.Article, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  func searchArticles(params: Resolved.SearchParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating, completion: @escaping (Swift.Result<Swift.Void, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
+  @available(iOS 13.0, *)
+  func getCollections(params: Resolved.CollectionListParams?) async throws -> Resolved.ApiResponse<[Resolved.Collection]>
+  @available(iOS 13.0, *)
+  func getArticles(params: Resolved.ArticleListParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
+  @available(iOS 13.0, *)
+  func getArticle(id: Swift.String) async throws -> Resolved.Article
+  @available(iOS 13.0, *)
+  func searchArticles(params: Resolved.SearchParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
+  @available(iOS 13.0, *)
+  func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating) async throws
+}
+extension Foundation.URLSessionTask : Resolved.RCancellable {
+  public var isCancelled: Swift.Bool {
+    get
+  }
 }
 public enum TicketStatus : Swift.String, Swift.Codable {
   case new
@@ -694,92 +774,6 @@ public struct TicketListParams {
   public let sortOrder: Swift.String?
   public init(status: [Resolved.TicketStatus]? = nil, priority: [Resolved.TicketPriority]? = nil, createdById: Swift.String? = nil, assignedToId: Swift.String? = nil, category: Swift.String? = nil, tags: [Swift.String]? = nil, createdAfter: Swift.String? = nil, createdBefore: Swift.String? = nil, page: Swift.Int? = nil, limit: Swift.Int? = nil, sortBy: Swift.String? = nil, sortOrder: Swift.String? = nil)
 }
-public class NetworkClient : Resolved.NetworkClientProtocol {
-  public init(configuration: Resolved.NetworkConfiguration, session: Foundation.URLSession? = nil, requestBuilder: (any Resolved.RequestBuilderProtocol)? = nil, networkMonitor: (any Resolved.NetworkMonitorProtocol)? = nil, jsonDecoder: Foundation.JSONDecoder? = nil, logger: (any Resolved.NetworkLoggerProtocol)? = nil)
-  convenience public init(baseURL: Foundation.URL, apiKey: Swift.String, enableOfflineQueue: Swift.Bool = true, loggingEnabled: Swift.Bool = false)
-  public func perform<T, R>(request: R, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
-  public func performWithoutDecoding<R>(request: R, completion: @escaping (Swift.Result<Foundation.Data?, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
-  public func performRaw<R>(request: R, completion: @escaping (Swift.Result<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where R : Resolved.RequestProtocol
-  public func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type, completion: @escaping (Swift.Result<T, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, R : Resolved.RequestProtocol
-  public func cancelAllRequests()
-  @available(iOS 13.0, *)
-  public func perform<T, R>(request: R, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func performWithoutDecoding<R>(request: R) async throws -> Foundation.Data? where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func performRaw<R>(request: R) async throws -> (Foundation.Data, Foundation.HTTPURLResponse) where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func uploadFile<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) async throws -> T where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func performPublisher<T, R>(request: R, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func performWithoutDecodingPublisher<R>(request: R) -> Combine.AnyPublisher<Foundation.Data?, Resolved.NetworkError> where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func performRawPublisher<R>(request: R) -> Combine.AnyPublisher<(Foundation.Data, Foundation.HTTPURLResponse), Resolved.NetworkError> where R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func uploadFilePublisher<T, R>(request: R, fileData: Foundation.Data, fileName: Swift.String, mimeType: Swift.String, formName: Swift.String, responseType: T.Type) -> Combine.AnyPublisher<T, Resolved.NetworkError> where T : Swift.Decodable, R : Resolved.RequestProtocol
-  @objc deinit
-}
-extension Resolved.NetworkClient {
-  public func performCached<T, R>(request: R, responseType: T.Type, cachePolicy: Resolved.CachePolicy, cacheTTL: Foundation.TimeInterval = 3600, completion: @escaping (Swift.Result<T, Resolved.NetworkError>, Swift.Bool) -> Swift.Void) -> any Resolved.RCancellable where T : Swift.Decodable, T : Swift.Encodable, R : Resolved.RequestProtocol
-  @available(iOS 13.0, *)
-  public func performCached<T, R>(request: R, responseType: T.Type, cachePolicy: Resolved.CachePolicy, cacheTTL: Foundation.TimeInterval = 3600) async throws -> (T, Swift.Bool) where T : Swift.Decodable, T : Swift.Encodable, R : Resolved.RequestProtocol
-}
-public protocol KnowledgeBaseProtocol {
-  func getCollections(params: Resolved.CollectionListParams?, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Collection]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  func getArticles(params: Resolved.ArticleListParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  func getArticle(id: Swift.String, completion: @escaping (Swift.Result<Resolved.Article, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  func searchArticles(params: Resolved.SearchParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Article]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating, completion: @escaping (Swift.Result<Swift.Void, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
-  @available(iOS 13.0, *)
-  func getCollections(params: Resolved.CollectionListParams?) async throws -> Resolved.ApiResponse<[Resolved.Collection]>
-  @available(iOS 13.0, *)
-  func getArticles(params: Resolved.ArticleListParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
-  @available(iOS 13.0, *)
-  func getArticle(id: Swift.String) async throws -> Resolved.Article
-  @available(iOS 13.0, *)
-  func searchArticles(params: Resolved.SearchParams) async throws -> Resolved.ApiResponse<[Resolved.Article]>
-  @available(iOS 13.0, *)
-  func rateArticle(articleId: Swift.String, rating: Resolved.ArticleRating) async throws
-}
-public struct AnyCodable : Swift.Codable {
-  public let value: Any
-  public init<T>(_ value: T?)
-}
-extension Resolved.AnyCodable : Swift.ExpressibleByNilLiteral {
-  public init(nilLiteral _: ())
-}
-extension Resolved.AnyCodable : Swift.ExpressibleByBooleanLiteral {
-  public init(booleanLiteral value: Swift.Bool)
-  public typealias BooleanLiteralType = Swift.Bool
-}
-extension Resolved.AnyCodable : Swift.ExpressibleByIntegerLiteral {
-  public init(integerLiteral value: Swift.Int)
-  public typealias IntegerLiteralType = Swift.Int
-}
-extension Resolved.AnyCodable : Swift.ExpressibleByFloatLiteral {
-  public init(floatLiteral value: Swift.Double)
-  public typealias FloatLiteralType = Swift.Double
-}
-extension Resolved.AnyCodable : Swift.ExpressibleByStringLiteral {
-  public init(stringLiteral value: Swift.String)
-  public typealias ExtendedGraphemeClusterLiteralType = Swift.String
-  public typealias StringLiteralType = Swift.String
-  public typealias UnicodeScalarLiteralType = Swift.String
-}
-extension Resolved.AnyCodable : Swift.ExpressibleByArrayLiteral {
-  public init(arrayLiteral elements: Any...)
-  public typealias ArrayLiteralElement = Any
-}
-extension Resolved.AnyCodable : Swift.ExpressibleByDictionaryLiteral {
-  public init(dictionaryLiteral elements: (Swift.AnyHashable, Any)...)
-  public typealias Key = Swift.AnyHashable
-  public typealias Value = Any
-}
-extension Resolved.AnyCodable {
-  public init(from decoder: any Swift.Decoder) throws
-  public func encode(to encoder: any Swift.Encoder) throws
-}
 final public class TicketingService : Resolved.TicketingProtocol {
   public init(networkClient: any Resolved.NetworkClientProtocol)
   final public func getTickets(params: Resolved.TicketListParams, completion: @escaping (Swift.Result<Resolved.ApiResponse<[Resolved.Ticket]>, Resolved.NetworkError>) -> Swift.Void) -> any Resolved.RCancellable
@@ -802,6 +796,21 @@ final public class TicketingService : Resolved.TicketingProtocol {
   final public func addComment(ticketId: Swift.String, request: Resolved.CreateCommentRequest) async throws -> Resolved.TicketComment
   @objc deinit
 }
+@objc public class CertificatePinningValidator : ObjectiveC.NSObject, Foundation.URLSessionDelegate {
+  public init(certificates: [Foundation.Data], validateHost: Swift.Bool = true)
+  convenience public init(certificateNames: [Swift.String], in bundle: Foundation.Bundle = .main, validateHost: Swift.Bool = true)
+  @objc public func urlSession(_ session: Foundation.URLSession, didReceive challenge: Foundation.URLAuthenticationChallenge, completionHandler: @escaping (Foundation.URLSession.AuthChallengeDisposition, Foundation.URLCredential?) -> Swift.Void)
+  @objc deinit
+}
+extension Resolved.HTTPMethod : Swift.Equatable {}
+extension Resolved.HTTPMethod : Swift.Hashable {}
+extension Resolved.HTTPMethod : Swift.RawRepresentable {}
+extension Resolved.ContentType : Swift.Equatable {}
+extension Resolved.ContentType : Swift.Hashable {}
+extension Resolved.ContentType : Swift.RawRepresentable {}
+extension Resolved.OrganizationStatus : Swift.Equatable {}
+extension Resolved.OrganizationStatus : Swift.Hashable {}
+extension Resolved.OrganizationStatus : Swift.RawRepresentable {}
 extension Resolved.FAQStatus : Swift.Equatable {}
 extension Resolved.FAQStatus : Swift.Hashable {}
 extension Resolved.FAQStatus : Swift.RawRepresentable {}
@@ -811,15 +820,6 @@ extension Resolved.ArticleStatus : Swift.RawRepresentable {}
 extension Resolved.ArticleType : Swift.Equatable {}
 extension Resolved.ArticleType : Swift.Hashable {}
 extension Resolved.ArticleType : Swift.RawRepresentable {}
-extension Resolved.OrganizationStatus : Swift.Equatable {}
-extension Resolved.OrganizationStatus : Swift.Hashable {}
-extension Resolved.OrganizationStatus : Swift.RawRepresentable {}
-extension Resolved.HTTPMethod : Swift.Equatable {}
-extension Resolved.HTTPMethod : Swift.Hashable {}
-extension Resolved.HTTPMethod : Swift.RawRepresentable {}
-extension Resolved.ContentType : Swift.Equatable {}
-extension Resolved.ContentType : Swift.Hashable {}
-extension Resolved.ContentType : Swift.RawRepresentable {}
 extension Resolved.TicketStatus : Swift.Equatable {}
 extension Resolved.TicketStatus : Swift.Hashable {}
 extension Resolved.TicketStatus : Swift.RawRepresentable {}
