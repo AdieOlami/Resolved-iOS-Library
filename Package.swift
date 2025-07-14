@@ -5,20 +5,20 @@ import PackageDescription
 
 let package = Package(
     name: "ResolvedLibrary",
+    platforms: [.iOS(.v18)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "ResolvedLibrary",
             targets: ["ResolvedLibrary"]),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "ResolvedLibrary"),
-        .testTarget(
-            name: "ResolvedLibraryTests",
-            dependencies: ["ResolvedLibrary"]
+            name: "ResolvedLibrary",
+            dependencies: ["Resolved"]
+        ),
+        .binaryTarget(
+            name: "Resolved",
+            path: "./Sources/Resolved.xcframework"
         ),
     ]
 )
