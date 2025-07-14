@@ -5,20 +5,22 @@ import PackageDescription
 
 let package = Package(
     name: "ResolvedLibrary",
-    platforms: [.iOS(.v18)],
+    platforms: [.iOS(.v15)], // Consider lowering to support more devices
     products: [
         .library(
             name: "ResolvedLibrary",
-            targets: ["ResolvedLibrary"]),
+            targets: ["ResolvedLibrary"]
+        ),
     ],
     targets: [
         .target(
             name: "ResolvedLibrary",
-            dependencies: ["Resolved"]
+            dependencies: ["Resolved"],
+            path: "Sources/ResolvedLibrary"
         ),
         .binaryTarget(
             name: "Resolved",
-            path: "./Sources/Resolved.xcframework"
+            path: "Sources/Resolved.xcframework"
         ),
     ]
 )
