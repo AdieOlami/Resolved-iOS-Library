@@ -14,7 +14,8 @@ public struct ResolvedHelpCenterView: View {
     public let configuration: HelpCenterConfiguration
     
     // Internal state
-    @State private var activeView: ViewType = .home
+    @State private var routes = NavigationPath()
+    
     @State private var searchQuery: String = ""
     @State private var isSearching: Bool = false
     @State private var openFAQIndex: Int? = 0
@@ -27,7 +28,7 @@ public struct ResolvedHelpCenterView: View {
     }
     
     public var body: some View {
-        NavigationView {
+        NavigationStack(path: $routes) {
             ZStack {
                 // Background
                 configuration.theme.backgroundColor
@@ -37,39 +38,9 @@ public struct ResolvedHelpCenterView: View {
                     if organization.capabilities.contains("use_sdk") {
                         // Normal help center content
                         VStack(spacing: 0) {
-                            // Back navigation (if not on home)
-                            if activeView != .home {
-                                BackNavigationView {
-                                    activeView = .home
-                                }
-                                .padding(.horizontal)
-                            }
-                            
                             // Main content
                             ScrollView {
-                                LazyVStack(spacing: 0) {
-                                    switch activeView {
-                                    case .home:
-                                        homeView
-                                    case .knowledgeBase:
-                                        KnowledgeBaseView(
-                                            configuration: configuration,
-                                            onBack: { activeView = .home }
-                                        )
-                                    case .tickets:
-                                        TicketSystemView(
-                                            configuration: configuration,
-                                            userId: configuration.customerId ?? "",
-                                            onBack: { activeView = .home }
-                                        )
-                                    case .createTicket:
-                                        CreateTicketView(
-                                            configuration: configuration,
-                                            userId: configuration.customerId ?? "",
-                                            onBack: { activeView = .home }
-                                        )
-                                    }
-                                }
+                                homeView
                             }
                         }
                     } else {
@@ -94,8 +65,36 @@ public struct ResolvedHelpCenterView: View {
                     }
                 }
             }
+            .navigationDestination(for: ViewType.self) { dest in
+                switch dest {
+                case .knowledgeBase:
+                    KnowledgeBaseView(
+                        configuration: configuration,
+                        routes: $routes,
+                        onBack: {
+                            routes = NavigationPath()
+                        }
+                    )
+                case .tickets:
+                    TicketSystemView(
+                        configuration: configuration,
+                        userId: configuration.customerId ?? "",
+                        routes: $routes,
+                        onBack: {
+                            routes = NavigationPath()
+                        }
+                    )
+                case .createTicket:
+                    CreateTicketView(
+                        configuration: configuration,
+                        userId: configuration.customerId ?? "",
+                        onBack: {
+                            routes = NavigationPath()
+                        }
+                    )
+                }
+            }
         }
-        .navigationViewStyle(StackNavigationViewStyle())
         .onAppear {
             setupSDK()
         }
@@ -114,14 +113,16 @@ public struct ResolvedHelpCenterView: View {
                 )
                 
                 // Action Cards
-                if shouldShowActionCards {
+//                if shouldShowActionCards {
                     ActionCardsView(
                         configuration: configuration,
                         onNavigate: { view in
-                            activeView = view
+//                            activeView = view
+                            routes.append(view)
+//                            routes.append(ViewType.knowledgeBase)
                         }
                     )
-                }
+//                }
                 
                 // FAQ Section
                 if configuration.includeFAQs && sdkManager.organization?.capabilities.contains("use_faq") == true {
@@ -274,9 +275,9 @@ public struct ResolvedHelpCenterView: View {
     }
     
     private var shouldShowActionCards: Bool {
-        let hasKB = configuration.includeKnowledgeBase && sdkManager.organization?.capabilities.contains("use_knowledgebase") == true
-        let hasTickets = configuration.includeTickets && sdkManager.organization?.capabilities.contains("use_tickets") == true
-        let hasCreate = configuration.includeCreateTicket && sdkManager.organization?.capabilities.contains("use_tickets") == true
+        let hasKB = sdkManager.organization?.capabilities.contains("use_knowledgebase") == true
+        let hasTickets = sdkManager.organization?.capabilities.contains("use_tickets") == true
+        let hasCreate = sdkManager.organization?.capabilities.contains("use_tickets") == true
         
         return hasKB || hasTickets || hasCreate
     }
@@ -408,64 +409,75 @@ struct HeroSectionView: View {
     }
 }
 
-// MARK: - Action Cards
+// MARK: - ActionCardsView
+
 struct ActionCardsView: View {
     let configuration: HelpCenterConfiguration
     let onNavigate: (ViewType) -> Void
     @StateObject private var sdkManager = ResolvedSDKManager()
     
     var body: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 16),
-            GridItem(.flexible(), spacing: 16),
-            GridItem(.flexible(), spacing: 16)
-        ], spacing: 16) {
+        VStack(spacing: 20) {
+            // Section Header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("How can we help?")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(configuration.theme.textColor)
+                    
+                    Text("Choose from the options below to get the help you need")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(configuration.theme.secondaryColor)
+                }
+                
+                Spacer()
+            }
             
-            // Knowledge Base Card
-            if configuration.includeKnowledgeBase && sdkManager.organization?.capabilities.contains("use_knowledgebase") == true {
+            // Action Cards - Vertical Stack for Portrait
+            VStack(spacing: 16) {
+                // Knowledge Base Card
                 ActionCard(
                     icon: "lightbulb.fill",
                     title: "Knowledge Base",
                     description: "Explore our comprehensive collection of guides, tutorials, and documentation to find instant answers.",
+                    iconColor: .orange,
                     configuration: configuration
                 ) {
                     onNavigate(.knowledgeBase)
                 }
-            }
-            
-            // Create Ticket Card
-            if configuration.includeCreateTicket && sdkManager.organization?.capabilities.contains("use_tickets") == true {
+                
+                // Create Ticket Card
                 ActionCard(
                     icon: "paperplane.fill",
                     title: "Get Support",
                     description: "Need personalized assistance? Submit a support ticket and our expert team will help you promptly.",
+                    iconColor: .blue,
                     configuration: configuration
                 ) {
                     onNavigate(.createTicket)
                 }
-            }
-            
-            // Your Tickets Card
-            if configuration.includeTickets && sdkManager.organization?.capabilities.contains("use_tickets") == true {
+                
+                // Your Tickets Card
                 ActionCard(
                     icon: "ticket.fill",
                     title: "Your Tickets",
                     description: "Track the progress of your support requests and communicate with our support team.",
+                    iconColor: .green,
                     configuration: configuration
                 ) {
                     onNavigate(.tickets)
                 }
             }
         }
-        .padding(.horizontal)
     }
 }
 
-// MARK: - Action Card
+// MARK: - Enhanced Action Card
 struct ActionCard: View {
     let icon: String
     let title: String
     let description: String
+    let iconColor: Color
     let configuration: HelpCenterConfiguration
     let action: () -> Void
     
@@ -473,18 +485,22 @@ struct ActionCard: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 16) {
-                // Icon
+            HStack(spacing: 20) {
+                // Icon with gradient background
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(configuration.theme.primaryColor.opacity(0.15))
-                        .frame(width: 56, height: 56)
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(iconBackgroundGradient)
+                        .frame(width: 64, height: 64)
+                        .shadow(color: iconColor.opacity(0.3), radius: 8, x: 0, y: 4)
                     
                     Image(systemName: icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(configuration.theme.primaryColor)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
                 }
+                .scaleEffect(isPressed ? 0.9 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
                 
+                // Content
                 VStack(alignment: .leading, spacing: 8) {
                     Text(title)
                         .font(.system(size: 20, weight: .bold))
@@ -495,24 +511,34 @@ struct ActionCard: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(configuration.theme.secondaryColor)
                         .multilineTextAlignment(.leading)
-                        .lineLimit(nil)
+                        .lineLimit(3)
                 }
                 
                 Spacer()
+                
+                // Arrow indicator
+                ZStack {
+                    Circle()
+                        .fill(configuration.theme.primaryColor.opacity(0.1))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(configuration.theme.primaryColor)
+                }
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(minHeight: 200)
+            .padding(20)
             .background(
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: 20)
                     .fill(cardBackgroundColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 24)
+                        RoundedRectangle(cornerRadius: 20)
                             .stroke(cardBorderColor, lineWidth: 1)
                     )
+                    .shadow(color: shadowColor, radius: isPressed ? 4 : 8, x: 0, y: isPressed ? 2 : 4)
             )
-            .scaleEffect(isPressed ? 0.96 : 1.0)
-            .animation(.easeInOut(duration: 0.1), value: isPressed)
+            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         }
         .buttonStyle(PlainButtonStyle())
         .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, perform: {}, onPressingChanged: { pressing in
@@ -520,24 +546,336 @@ struct ActionCard: View {
         })
     }
     
+    private var iconBackgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [iconColor, iconColor.opacity(0.7)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
     private var cardBackgroundColor: Color {
-        if configuration.theme.mode == .dark {
-            return Color(.systemGray6).opacity(0.3)
-        } else {
-            return Color.white.opacity(0.8)
-        }
+        configuration.theme.mode == .dark
+            ? Color(.systemGray6).opacity(0.3)
+            : Color.white
     }
     
     private var cardBorderColor: Color {
-        if configuration.theme.mode == .dark {
-            return Color(.systemGray4).opacity(0.3)
-        } else {
-            return Color(.systemGray4).opacity(0.4)
+        configuration.theme.mode == .dark
+            ? Color(.systemGray4).opacity(0.2)
+            : Color(.systemGray4).opacity(0.1)
+    }
+    
+    private var shadowColor: Color {
+        configuration.theme.mode == .dark
+            ? Color.black.opacity(0.3)
+            : Color.black.opacity(0.1)
+    }
+}
+
+// MARK: - Alternative Compact Action Cards (if you prefer a more compact layout)
+struct CompactActionCardsView: View {
+    let configuration: HelpCenterConfiguration
+    let onNavigate: (ViewType) -> Void
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            // Section Header
+            HStack {
+                Text("Quick Actions")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(configuration.theme.textColor)
+                
+                Spacer()
+            }
+            
+            // Compact Cards in 2x2 Grid for Portrait
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
+                
+                CompactActionCard(
+                    icon: "lightbulb.fill",
+                    title: "Knowledge Base",
+                    iconColor: .orange,
+                    configuration: configuration
+                ) {
+                    onNavigate(.knowledgeBase)
+                }
+                
+                CompactActionCard(
+                    icon: "paperplane.fill",
+                    title: "Get Support",
+                    iconColor: .blue,
+                    configuration: configuration
+                ) {
+                    onNavigate(.createTicket)
+                }
+                
+                CompactActionCard(
+                    icon: "ticket.fill",
+                    title: "Your Tickets",
+                    iconColor: .green,
+                    configuration: configuration
+                ) {
+                    onNavigate(.tickets)
+                }
+                
+                CompactActionCard(
+                    icon: "questionmark.circle.fill",
+                    title: "FAQ",
+                    iconColor: .purple,
+                    configuration: configuration
+                ) {
+                    // Handle FAQ navigation
+                }
+            }
         }
     }
 }
 
-// MARK: - FAQ Section
+// MARK: - Compact Action Card
+struct CompactActionCard: View {
+    let icon: String
+    let title: String
+    let iconColor: Color
+    let configuration: HelpCenterConfiguration
+    let action: () -> Void
+    
+    @State private var isPressed = false
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 16) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(iconBackgroundGradient)
+                        .frame(width: 56, height: 56)
+                        .shadow(color: iconColor.opacity(0.3), radius: 6, x: 0, y: 3)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                }
+                .scaleEffect(isPressed ? 0.9 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+                
+                // Title
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(configuration.theme.textColor)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity)
+            .frame(height: 120)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(cardBackgroundColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(cardBorderColor, lineWidth: 1)
+                    )
+                    .shadow(color: shadowColor, radius: isPressed ? 4 : 8, x: 0, y: isPressed ? 2 : 4)
+            )
+            .scaleEffect(isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, perform: {}, onPressingChanged: { pressing in
+            isPressed = pressing
+        })
+    }
+    
+    private var iconBackgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [iconColor, iconColor.opacity(0.7)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    private var cardBackgroundColor: Color {
+        configuration.theme.mode == .dark
+            ? Color(.systemGray6).opacity(0.3)
+            : Color.white
+    }
+    
+    private var cardBorderColor: Color {
+        configuration.theme.mode == .dark
+            ? Color(.systemGray4).opacity(0.2)
+            : Color(.systemGray4).opacity(0.1)
+    }
+    
+    private var shadowColor: Color {
+        configuration.theme.mode == .dark
+            ? Color.black.opacity(0.3)
+            : Color.black.opacity(0.1)
+    }
+}
+
+//// MARK: - FAQ Section
+//struct FAQSectionView: View {
+//    let configuration: HelpCenterConfiguration
+//    let searchQuery: String
+//    let isSearching: Bool
+//    @Binding var openFAQIndex: Int?
+//    @ObservedObject var sdkManager: ResolvedSDKManager
+//    
+//    var body: some View {
+//        VStack(spacing: 24) {
+//            Text(isSearching ? "Search Results for \"\(searchQuery)\"" : "Frequently Asked Questions")
+//                .font(.system(size: 32, weight: .black))
+//                .foregroundColor(configuration.theme.textColor)
+//                .multilineTextAlignment(.center)
+//            
+//            VStack(spacing: 0) {
+//                if sdkManager.isLoadingFAQs {
+//                    LoadingView(message: "Loading frequently asked questions...")
+//                        .padding(48)
+//                } else if let faqs = displayFAQs, !faqs.isEmpty {
+//                    ForEach(Array(faqs.enumerated()), id: \.element.id) { index, faq in
+//                        FAQItemView(
+//                            faq: faq,
+//                            isOpen: openFAQIndex == index,
+//                            isLast: index == faqs.count - 1,
+//                            configuration: configuration,
+//                            onToggle: {
+//                                openFAQIndex = openFAQIndex == index ? nil : index
+//                            }
+//                        )
+//                    }
+//                } else {
+//                    EmptyStateView(
+//                        title: isSearching ? "No results found" : "No FAQs available",
+//                        message: isSearching
+//                        ? "No results found for \"\(searchQuery)\". Try adjusting your search terms or browse our knowledge base."
+//                        : "No frequently asked questions are available at the moment. Check back later or contact support for assistance.",
+//                        configuration: configuration
+//                    )
+//                    .padding(48)
+//                }
+//            }
+//            .background(
+//                RoundedRectangle(cornerRadius: 24)
+//                    .fill(faqBackgroundColor)
+//                    .overlay(
+//                        RoundedRectangle(cornerRadius: 24)
+//                            .stroke(faqBorderColor, lineWidth: 1)
+//                    )
+//            )
+//        }
+//        .padding(.horizontal)
+//    }
+//    
+//    private var displayFAQs: [FAQ]? {
+//        return isSearching ? sdkManager.searchedFAQs : sdkManager.faqs
+//    }
+//    
+//    private var faqBackgroundColor: Color {
+//        if configuration.theme.mode == .dark {
+//            return Color(.systemGray6).opacity(0.3)
+//        } else {
+//            return Color.white.opacity(0.7)
+//        }
+//    }
+//    
+//    private var faqBorderColor: Color {
+//        if configuration.theme.mode == .dark {
+//            return Color(.systemGray4).opacity(0.3)
+//        } else {
+//            return Color(.systemGray4).opacity(0.4)
+//        }
+//    }
+//}
+//
+//// MARK: - FAQ Item
+//struct FAQItemView: View {
+//    let faq: FAQ
+//    let isOpen: Bool
+//    let isLast: Bool
+//    let configuration: HelpCenterConfiguration
+//    let onToggle: () -> Void
+//    
+//    var body: some View {
+//        VStack(spacing: 0) {
+//            Button(action: onToggle) {
+//                HStack {
+//                    Text(faq.question)
+//                        .font(.system(size: 16, weight: .bold))
+//                        .foregroundColor(configuration.theme.textColor)
+//                        .multilineTextAlignment(.leading)
+//                        .frame(maxWidth: .infinity, alignment: .leading)
+//                    
+//                    Spacer()
+//                    
+//                    ZStack {
+//                        RoundedRectangle(cornerRadius: 12)
+//                            .fill(iconBackgroundColor)
+//                            .frame(width: 32, height: 32)
+//                        
+//                        Image(systemName: isOpen ? "minus" : "plus")
+//                            .font(.system(size: 16, weight: .semibold))
+//                            .foregroundColor(configuration.theme.primaryColor)
+//                            .rotationEffect(.degrees(isOpen ? 0 : 0))
+//                            .animation(.easeInOut(duration: 0.2), value: isOpen)
+//                    }
+//                }
+//                .padding(.horizontal, 24)
+//                .padding(.vertical, 20)
+//                .background(isOpen ? questionBackgroundColor : Color.clear)
+//            }
+//            .buttonStyle(PlainButtonStyle())
+//            
+//            if isOpen {
+//                Text(faq.answer)
+//                    .font(.system(size: 14, weight: .medium))
+//                    .foregroundColor(configuration.theme.secondaryColor)
+//                    .lineLimit(nil)
+//                    .multilineTextAlignment(.leading)
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+//                    .padding(.horizontal, 24)
+//                    .padding(.bottom, 20)
+//                    .background(answerBackgroundColor)
+//                    .transition(.opacity.combined(with: .move(edge: .top)))
+//                    .animation(.easeInOut(duration: 0.3), value: isOpen)
+//            }
+//            
+//            if !isLast {
+//                Divider()
+//                    .background(dividerColor)
+//            }
+//        }
+//    }
+//    
+//    private var iconBackgroundColor: Color {
+//        configuration.theme.primaryColor.opacity(0.15)
+//    }
+//    
+//    private var questionBackgroundColor: Color {
+//        configuration.theme.primaryColor.opacity(0.05)
+//    }
+//    
+//    private var answerBackgroundColor: Color {
+//        if configuration.theme.mode == .dark {
+//            return Color(.systemGray6).opacity(0.2)
+//        } else {
+//            return Color(.systemGray6).opacity(0.3)
+//        }
+//    }
+//    
+//    private var dividerColor: Color {
+//        if configuration.theme.mode == .dark {
+//            return Color(.systemGray4).opacity(0.3)
+//        } else {
+//            return Color(.systemGray4).opacity(0.4)
+//        }
+//    }
+//}
+
 struct FAQSectionView: View {
     let configuration: HelpCenterConfiguration
     let searchQuery: String
@@ -547,26 +885,62 @@ struct FAQSectionView: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            Text(isSearching ? "Search Results for \"\(searchQuery)\"" : "Frequently Asked Questions")
-                .font(.system(size: 32, weight: .black))
-                .foregroundColor(configuration.theme.textColor)
-                .multilineTextAlignment(.center)
+            // Section Header
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(isSearching ? "Search Results" : "Frequently Asked Questions")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(configuration.theme.textColor)
+                        
+                        if isSearching {
+                            Text("Results for \"\(searchQuery)\"")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(configuration.theme.secondaryColor)
+                        } else {
+                            Text("Find quick answers to common questions")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(configuration.theme.secondaryColor)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    if !isSearching && displayFAQs?.isEmpty == false {
+                        Text("\(displayFAQs?.count ?? 0)")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(configuration.theme.primaryColor)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(configuration.theme.primaryColor.opacity(0.1))
+                            )
+                    }
+                }
+            }
             
+            // FAQ Content
             VStack(spacing: 0) {
                 if sdkManager.isLoadingFAQs {
                     LoadingView(message: "Loading frequently asked questions...")
                         .padding(48)
                 } else if let faqs = displayFAQs, !faqs.isEmpty {
-                    ForEach(Array(faqs.enumerated()), id: \.element.id) { index, faq in
-                        FAQItemView(
-                            faq: faq,
-                            isOpen: openFAQIndex == index,
-                            isLast: index == faqs.count - 1,
-                            configuration: configuration,
-                            onToggle: {
-                                openFAQIndex = openFAQIndex == index ? nil : index
-                            }
-                        )
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(faqs.enumerated()), id: \.element.id) { index, faq in
+                            FAQItemView(
+                                faq: faq,
+                                index: index,
+                                isOpen: openFAQIndex == index,
+                                isLast: index == faqs.count - 1,
+                                configuration: configuration,
+                                onToggle: {
+                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                                        openFAQIndex = openFAQIndex == index ? nil : index
+                                    }
+                                }
+                            )
+                        }
                     }
                 } else {
                     EmptyStateView(
@@ -582,13 +956,9 @@ struct FAQSectionView: View {
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .fill(faqBackgroundColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(faqBorderColor, lineWidth: 1)
-                    )
+                    .shadow(color: shadowColor, radius: 8, x: 0, y: 4)
             )
         }
-        .padding(.horizontal)
     }
     
     private var displayFAQs: [FAQ]? {
@@ -596,25 +966,22 @@ struct FAQSectionView: View {
     }
     
     private var faqBackgroundColor: Color {
-        if configuration.theme.mode == .dark {
-            return Color(.systemGray6).opacity(0.3)
-        } else {
-            return Color.white.opacity(0.7)
-        }
+        configuration.theme.mode == .dark
+            ? Color(.systemGray6).opacity(0.3)
+            : Color.white
     }
     
-    private var faqBorderColor: Color {
-        if configuration.theme.mode == .dark {
-            return Color(.systemGray4).opacity(0.3)
-        } else {
-            return Color(.systemGray4).opacity(0.4)
-        }
+    private var shadowColor: Color {
+        configuration.theme.mode == .dark
+            ? Color.black.opacity(0.3)
+            : Color.black.opacity(0.1)
     }
 }
 
-// MARK: - FAQ Item
+// MARK: - Enhanced FAQ Item
 struct FAQItemView: View {
     let faq: FAQ
+    let index: Int
     let isOpen: Bool
     let isLast: Bool
     let configuration: HelpCenterConfiguration
@@ -622,77 +989,182 @@ struct FAQItemView: View {
     
     var body: some View {
         VStack(spacing: 0) {
+            // Question Button
             Button(action: onToggle) {
-                HStack {
-                    Text(faq.question)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(configuration.theme.textColor)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 16) {
+                    // Question Number Badge
+                    ZStack {
+                        Circle()
+                            .fill(questionNumberGradient)
+                            .frame(width: 32, height: 32)
+                            .shadow(color: configuration.theme.primaryColor.opacity(0.3), radius: 4, x: 0, y: 2)
+                        
+                        Text("\(index + 1)")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    
+                    // Question Text
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(faq.question)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(configuration.theme.textColor)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(nil)
+                        
+                        if isOpen {
+                            Text("Tap to close")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(configuration.theme.secondaryColor.opacity(0.7))
+                        }
+                    }
                     
                     Spacer()
                     
+                    // Expand/Collapse Icon
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12)
+                        Circle()
                             .fill(iconBackgroundColor)
-                            .frame(width: 32, height: 32)
+                            .frame(width: 36, height: 36)
                         
-                        Image(systemName: isOpen ? "minus" : "plus")
-                            .font(.system(size: 16, weight: .semibold))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14, weight: .bold))
                             .foregroundColor(configuration.theme.primaryColor)
-                            .rotationEffect(.degrees(isOpen ? 0 : 0))
-                            .animation(.easeInOut(duration: 0.2), value: isOpen)
+                            .rotationEffect(.degrees(isOpen ? 180 : 0))
+                            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: isOpen)
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 20)
                 .padding(.vertical, 20)
-                .background(isOpen ? questionBackgroundColor : Color.clear)
+                .background(
+                    RoundedRectangle(cornerRadius: isOpen ? 20 : 0)
+                        .fill(questionBackgroundColor)
+                        .animation(.easeInOut(duration: 0.3), value: isOpen)
+                )
             }
             .buttonStyle(PlainButtonStyle())
-            
+                                        
+            // Answer Section
             if isOpen {
-                Text(faq.answer)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(configuration.theme.secondaryColor)
-                    .lineLimit(nil)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 24)
+                VStack(alignment: .leading, spacing: 16) {
+                    Divider()
+                        .background(configuration.theme.borderColor.opacity(0.3))
+                        .padding(.horizontal, 20)
+                    
+                    HStack(alignment: .top, spacing: 16) {
+                        // Answer Icon
+                        ZStack {
+                            Circle()
+                                .fill(answerIconGradient)
+                                .frame(width: 32, height: 32)
+                                .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
+                            
+                            Image(systemName: "lightbulb.fill")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        
+                        // Answer Text
+                        Text(faq.answer)
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(configuration.theme.textColor)
+                            .lineLimit(nil)
+                            .multilineTextAlignment(.leading)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, 20)
                     .padding(.bottom, 20)
-                    .background(answerBackgroundColor)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                    .animation(.easeInOut(duration: 0.3), value: isOpen)
+                }
+                .background(answerBackgroundColor)
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .top)).combined(with: .scale(scale: 0.95)),
+                    removal: .opacity.combined(with: .move(edge: .top))
+                ))
             }
             
-            if !isLast {
+            // Divider (except for last item)
+            if !isLast && !isOpen {
                 Divider()
                     .background(dividerColor)
+                    .padding(.horizontal, 20)
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: isOpen ? 20 : 0))
+        .overlay(
+            RoundedRectangle(cornerRadius: isOpen ? 20 : 0)
+                .stroke(isOpen ? configuration.theme.primaryColor.opacity(0.2) : Color.clear, lineWidth: 1)
+                .animation(.easeInOut(duration: 0.3), value: isOpen)
+        )
+    }
+    
+    private var questionNumberGradient: LinearGradient {
+        LinearGradient(
+            colors: [configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.7)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    private var answerIconGradient: LinearGradient {
+        LinearGradient(
+            colors: [Color.blue, Color.blue.opacity(0.7)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
     
     private var iconBackgroundColor: Color {
-        configuration.theme.primaryColor.opacity(0.15)
+        configuration.theme.primaryColor.opacity(0.1)
     }
     
     private var questionBackgroundColor: Color {
-        configuration.theme.primaryColor.opacity(0.05)
+        if isOpen {
+            return configuration.theme.primaryColor.opacity(0.05)
+        }
+        return Color.clear
     }
     
     private var answerBackgroundColor: Color {
-        if configuration.theme.mode == .dark {
-            return Color(.systemGray6).opacity(0.2)
-        } else {
-            return Color(.systemGray6).opacity(0.3)
-        }
+        configuration.theme.mode == .dark
+            ? Color(.systemGray6).opacity(0.2)
+            : Color(.systemGray6).opacity(0.3)
     }
     
     private var dividerColor: Color {
-        if configuration.theme.mode == .dark {
-            return Color(.systemGray4).opacity(0.3)
-        } else {
-            return Color(.systemGray4).opacity(0.4)
+        configuration.theme.mode == .dark
+            ? Color(.systemGray4).opacity(0.3)
+            : Color(.systemGray4).opacity(0.2)
+    }
+}
+
+// MARK: - FAQ Loading Skeleton
+struct FAQSkeletonView: View {
+    let configuration: HelpCenterConfiguration
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: 16) {
+                    SkeletonCircle(size: 32)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        SkeletonLine(width: nil, height: 16)
+                        SkeletonLine(width: 200, height: 14)
+                    }
+                    
+                    Spacer()
+                    
+                    SkeletonCircle(size: 36)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 20)
+            }
         }
+        .background(
+            RoundedRectangle(cornerRadius: 24)
+                .fill(configuration.theme.mode == .dark ? Color(.systemGray6).opacity(0.3) : Color.white)
+        )
     }
 }
 
@@ -779,9 +1251,21 @@ struct EmptyStateView: View {
 }
 
 // MARK: - View Types
-enum ViewType {
-    case home
+
+enum ViewType: Hashable {
     case knowledgeBase
     case tickets
     case createTicket
+}
+
+#Preview {
+    ResolvedHelpCenterView(configuration: .production(
+        apiKey: "01JWQ9DPSZ2M3HFXTN31FRVFV5",
+//                    baseURL: URL(string: "https://api.example.com")!,
+        customerId: "preview-user",
+        customerEmail: "user@example.com",
+        customerName: "Preview User",
+        theme: .light(primaryColor: .blue),
+    ))
+    .previewDisplayName("Light Theme")
 }

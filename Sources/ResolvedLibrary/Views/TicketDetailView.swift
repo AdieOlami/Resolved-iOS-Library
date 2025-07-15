@@ -433,6 +433,8 @@ struct MessageBubbleView: View {
     
     private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
         guard let date = formatter.date(from: dateString) else {
             return dateString
         }

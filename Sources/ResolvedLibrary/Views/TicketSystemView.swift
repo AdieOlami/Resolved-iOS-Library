@@ -9,9 +9,11 @@ import SwiftUI
 @_exported import Resolved
 
 // MARK: - Ticket System View
+
 struct TicketSystemView: View {
     let configuration: HelpCenterConfiguration
     let userId: String
+    @Binding var routes: NavigationPath
     let onBack: () -> Void
     
     @StateObject private var sdkManager = ResolvedSDKManager()
@@ -34,190 +36,237 @@ struct TicketSystemView: View {
     }
     
     var body: some View {
-        HStack(spacing: 0) {
-            // Sidebar
-            VStack(spacing: 0) {
-                // Sidebar Header
-                sidebarHeader
-                
-                // Tickets List
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        if sdkManager.isLoadingTickets {
-                            ForEach(0..<3, id: \.self) { _ in
-                                SkeletonTicketView(configuration: configuration)
-                            }
-                        } else if let error = sdkManager.ticketError {
-                            ErrorView(message: error, onRetry: {
-                                sdkManager.loadTickets()
-                            })
-                            .padding(16)
-                        } else if filteredTickets.isEmpty {
-                            EmptyStateView(
-                                title: searchQuery.isEmpty ? "No tickets yet" : "No tickets found",
-                                message: searchQuery.isEmpty
-                                    ? "You haven't created any tickets yet. Create your first ticket to get started!"
-                                    : "No tickets match your search criteria. Try adjusting your search terms.",
-                                configuration: configuration
-                            )
-                            .padding(40)
-                        } else {
-                            ForEach(filteredTickets, id: \.id) { ticket in
-                                TicketItemView(
-                                    ticket: ticket,
-                                    configuration: configuration,
-                                    isSelected: selectedTicketId == ticket.id,
-                                    onSelect: {
-                                        selectedTicketId = ticket.id
-                                        sdkManager.loadTicket(id: ticket.id)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-                }
-                .refreshable {
-                    await refreshTickets()
-                }
-            }
-            .frame(width: 400)
-            .background(sidebarBackgroundColor)
-            .overlay(
-                Rectangle()
-                    .fill(configuration.theme.borderColor.opacity(0.3))
-                    .frame(width: 1),
-                alignment: .trailing
-            )
+        VStack(spacing: 0) {
+            // Header
+            headerView
             
-            // Main Content
-            Group {
-                if let selectedTicketId = selectedTicketId {
-                    TicketDetailView(
-                        ticketId: selectedTicketId,
-                        configuration: configuration,
-                        sdkManager: sdkManager,
-                        activeTab: $activeTab,
-                        newCommentText: $newCommentText,
-                        isSubmittingComment: $isSubmittingComment,
-                        onSubmitComment: submitComment
-                    )
-                } else {
-                    emptyMainContent
+            // Content
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    if sdkManager.isLoadingTickets {
+                        loadingTicketsView
+                    } else if let error = sdkManager.ticketError {
+                        ErrorView(message: error, onRetry: {
+                            sdkManager.loadTickets()
+                        })
+                        .padding(16)
+                    } else if filteredTickets.isEmpty {
+                        emptyTicketsView
+                    } else {
+                        ticketsListView
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+            .refreshable {
+                await refreshTickets()
+            }
+        }
+        .background(configuration.theme.backgroundColor)
+        .navigationBarHidden(true)
+        .navigationDestination(for: String.self) { ticketId in
+            TicketDetailView(
+                ticketId: ticketId,
+                configuration: configuration,
+                sdkManager: sdkManager,
+                activeTab: $activeTab,
+                newCommentText: $newCommentText,
+                isSubmittingComment: $isSubmittingComment,
+                onSubmitComment: submitComment
+            )
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        routes.removeLast()
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Back")
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .foregroundColor(configuration.theme.primaryColor)
+                    }
                 }
             }
-            .frame(maxWidth: .infinity)
-            .background(configuration.theme.backgroundColor)
         }
         .onAppear {
-            var config = configuration
-            config = HelpCenterConfiguration(
-                apiKey: configuration.apiKey,
-                baseURL: configuration.baseURL,
-                customerId: userId,
-                customerEmail: configuration.customerEmail,
-                customerName: configuration.customerName,
-                customerMetadata: configuration.customerMetadata,
-                includeKnowledgeBase: configuration.includeKnowledgeBase,
-                includeTickets: configuration.includeTickets,
-                includeCreateTicket: configuration.includeCreateTicket,
-                includeFAQs: configuration.includeFAQs,
-                theme: configuration.theme,
-                timeoutInterval: configuration.timeoutInterval,
-                shouldRetry: configuration.shouldRetry,
-                maxRetries: configuration.maxRetries,
-                enableOfflineQueue: configuration.enableOfflineQueue,
-                loggingEnabled: configuration.loggingEnabled
-            )
-            sdkManager.initialize(with: config)
+            setupSDK()
         }
     }
     
-    // MARK: - Sidebar Header
-    private var sidebarHeader: some View {
-        VStack(spacing: 20) {
+    // MARK: - Header View
+    private var headerView: some View {
+        VStack(spacing: 0) {
+            // Top section with title and stats
             HStack {
-                Text("Support Tickets")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(configuration.theme.textColor)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Support Tickets")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(configuration.theme.textColor)
+                    
+                    if !sdkManager.tickets.isEmpty {
+                        Text("\(sdkManager.tickets.count) Ticket\(sdkManager.tickets.count == 1 ? "" : "s")")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(configuration.theme.secondaryColor)
+                    }
+                }
                 
                 Spacer()
-            }
-            
-            // Search Bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(configuration.theme.secondaryColor)
-                    .font(.system(size: 16))
                 
-                TextField("Search tickets...", text: $searchQuery)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(configuration.theme.textColor)
-                
-                if !searchQuery.isEmpty {
-                    Button(action: {
-                        searchQuery = ""
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(configuration.theme.secondaryColor)
-                            .font(.system(size: 16))
+                // Back button
+                Button(action: onBack) {
+                    ZStack {
+                        Circle()
+                            .fill(configuration.theme.primaryColor.opacity(0.1))
+                            .frame(width: 40, height: 40)
+                        
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(configuration.theme.primaryColor)
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(searchBackgroundColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(configuration.theme.borderColor.opacity(0.3), lineWidth: 1)
-                    )
-            )
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+            
+            // Search Bar
+            searchBarView
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            
+            // Status Overview Cards
+            if !sdkManager.tickets.isEmpty {
+                statusOverviewView
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+            }
+            
+            Divider()
+                .background(configuration.theme.borderColor.opacity(0.3))
         }
-        .padding(20)
-        .background(sidebarHeaderBackgroundColor)
-        .overlay(
-            Rectangle()
-                .fill(configuration.theme.borderColor.opacity(0.3))
-                .frame(height: 1),
-            alignment: .bottom
+        .background(headerBackgroundColor)
+    }
+    
+    private var searchBarView: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(configuration.theme.primaryColor.opacity(0.1))
+                    .frame(width: 36, height: 36)
+                
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(configuration.theme.primaryColor)
+            }
+            
+            TextField("Search tickets...", text: $searchQuery)
+                .textFieldStyle(PlainTextFieldStyle())
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(configuration.theme.textColor)
+            
+            if !searchQuery.isEmpty {
+                Button(action: {
+                    searchQuery = ""
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(configuration.theme.secondaryColor)
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(searchBackgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(configuration.theme.borderColor.opacity(0.2), lineWidth: 1)
+                )
         )
     }
     
-    // MARK: - Empty Main Content
-    private var emptyMainContent: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(Color(.systemGray5).opacity(0.8))
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: "bubble.left.and.bubble.right.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(configuration.theme.secondaryColor)
+    private var statusOverviewView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(ticketStatusCounts, id: \.status) { statusCount in
+                    StatusOverviewCard(
+                        status: statusCount.status,
+                        count: statusCount.count,
+                        configuration: configuration
+                    )
+                }
             }
-            
-            VStack(spacing: 8) {
-                Text("Select a ticket")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(configuration.theme.textColor)
-                
-                Text("Choose a ticket from the list to view its details and continue the conversation.")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(configuration.theme.secondaryColor)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    // MARK: - Content Views
+    private var loadingTicketsView: some View {
+        LazyVStack(spacing: 16) {
+            ForEach(0..<5, id: \.self) { _ in
+                SkeletonTicketCardView(configuration: configuration)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(configuration.theme.backgroundColor)
+        .padding(.top, 20)
+    }
+    
+    private var emptyTicketsView: some View {
+        EmptyStateView(
+            title: searchQuery.isEmpty ? "No tickets yet" : "No tickets found",
+            message: searchQuery.isEmpty
+                ? "You haven't created any tickets yet. Create your first ticket to get started!"
+                : "No tickets match your search criteria. Try adjusting your search terms.",
+            configuration: configuration
+        )
+        .padding(40)
+    }
+    
+    private var ticketsListView: some View {
+        LazyVStack(spacing: 16) {
+            ForEach(filteredTickets, id: \.id) { ticket in
+                TicketCardView(
+                    ticket: ticket,
+                    configuration: configuration,
+                    onSelect: {
+                        routes.append(ticket.id)
+                        sdkManager.loadTicket(id: ticket.id)
+                    }
+                )
+            }
+        }
+        .padding(.top, 20)
     }
     
     // MARK: - Helper Methods
+    private func setupSDK() {
+        var config = configuration
+        config = HelpCenterConfiguration(
+            apiKey: configuration.apiKey,
+            baseURL: configuration.baseURL,
+            customerId: userId,
+            customerEmail: configuration.customerEmail,
+            customerName: configuration.customerName,
+            customerMetadata: configuration.customerMetadata,
+            includeKnowledgeBase: configuration.includeKnowledgeBase,
+            includeTickets: configuration.includeTickets,
+            includeCreateTicket: configuration.includeCreateTicket,
+            includeFAQs: configuration.includeFAQs,
+            theme: configuration.theme,
+            timeoutInterval: configuration.timeoutInterval,
+            shouldRetry: configuration.shouldRetry,
+            maxRetries: configuration.maxRetries,
+            enableOfflineQueue: configuration.enableOfflineQueue,
+            loggingEnabled: configuration.loggingEnabled
+        )
+        sdkManager.initialize(with: config)
+    }
+    
     private func submitComment() {
         guard !newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let ticketId = selectedTicketId else { return }
@@ -235,13 +284,11 @@ struct TicketSystemView: View {
                 await MainActor.run {
                     newCommentText = ""
                     isSubmittingComment = false
-                    // Reload the ticket to get updated comments
                     sdkManager.loadTicket(id: ticketId)
                 }
             } catch {
                 await MainActor.run {
                     isSubmittingComment = false
-                    // Handle error (you might want to show an alert)
                 }
             }
         }
@@ -251,147 +298,440 @@ struct TicketSystemView: View {
     private func refreshTickets() async {
         sdkManager.loadTickets()
         
-        // Wait for tickets to load
         while sdkManager.isLoadingTickets {
             try? await Task.sleep(nanoseconds: 100_000_000)
-        }
-        
-        // If a ticket is selected, refresh its details too
-        if let selectedId = selectedTicketId {
-            sdkManager.loadTicket(id: selectedId)
         }
     }
     
     // MARK: - Computed Properties
-    private var sidebarBackgroundColor: Color {
-        configuration.theme.mode == .dark 
-            ? Color(.systemGray6).opacity(0.3) 
-            : Color.white.opacity(0.7)
-    }
-    
-    private var sidebarHeaderBackgroundColor: Color {
+    private var headerBackgroundColor: Color {
         configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.3)
-            : Color(.systemGray6).opacity(0.5)
+            ? Color(.systemBackground)
+            : Color(.systemBackground)
     }
     
     private var searchBackgroundColor: Color {
         configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.3)
-            : Color.white.opacity(0.9)
+            ? Color(.systemGray6).opacity(0.3)
+            : Color(.systemGray6).opacity(0.8)
+    }
+    
+    private var ticketStatusCounts: [(status: String, count: Int)] {
+        let tickets = sdkManager.tickets
+        return [
+            ("Open", tickets.filter { $0.status == .open || $0.status == .new }.count),
+            ("In Progress", tickets.filter { $0.status == .inProgress }.count),
+            ("On Hold", tickets.filter { $0.status == .onHold }.count),
+            ("Resolved", tickets.filter { $0.status == .resolved || $0.status == .closed }.count)
+        ].filter { $0.count > 0 }
     }
 }
 
-// MARK: - Ticket Item View
-struct TicketItemView: View {
+// MARK: - Status Overview Card
+struct StatusOverviewCard: View {
+    let status: String
+    let count: Int
+    let configuration: HelpCenterConfiguration
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 12, height: 12)
+                
+                Text("\(count)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(configuration.theme.textColor)
+            }
+            
+            Text(status)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(configuration.theme.secondaryColor)
+                .textCase(.uppercase)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(cardBackgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(statusColor.opacity(0.2), lineWidth: 1)
+                )
+        )
+    }
+    
+    private var statusColor: Color {
+        switch status {
+        case "Open": return .blue
+        case "In Progress": return .orange
+        case "On Hold": return .gray
+        case "Resolved": return .green
+        default: return .blue
+        }
+    }
+    
+    private var cardBackgroundColor: Color {
+        configuration.theme.mode == .dark
+            ? Color(.systemGray6).opacity(0.2)
+            : Color.white.opacity(0.8)
+    }
+}
+
+// MARK: - Ticket Card View
+struct TicketCardView: View {
     let ticket: Ticket
     let configuration: HelpCenterConfiguration
-    let isSelected: Bool
     let onSelect: () -> Void
     
     var body: some View {
         Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 12) {
-                // Header with ID and badges
+            VStack(spacing: 0) {
+                // Header with ref ID and badges
                 HStack {
-                    Text("#\(ticket.refId)")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(configuration.theme.textColor)
+                    HStack(spacing: 12) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(iconBackgroundGradient)
+                                .frame(width: 44, height: 44)
+                            
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .shadow(color: configuration.theme.primaryColor.opacity(0.3), radius: 4, x: 0, y: 2)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("#\(ticket.refId)")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(configuration.theme.textColor)
+                            
+                            Text(formatDate(ticket.createdAt))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(configuration.theme.secondaryColor)
+                        }
+                    }
                     
                     Spacer()
                     
-                    HStack(spacing: 8) {
+                    VStack(spacing: 8) {
                         StatusBadge(status: ticket.status, configuration: configuration)
-                        PriorityBadge(priority: ticket.priority, configuration: configuration)
+                        PriorityIndicator(priority: TicketPriority(rawValue: ticket.priority.rawValue) ?? .low, configuration: configuration)
                     }
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
                 
-                // Title
-                Text(ticket.title)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(configuration.theme.secondaryColor)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                
-                Spacer()
+                // Title and description
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(ticket.title)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(configuration.theme.textColor)
+                        .multilineTextAlignment(.leading)
+                        .lineLimit(2)
+                    
+                    if !ticket.description.isEmpty {
+                        Text(ticket.description)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(configuration.theme.secondaryColor)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(3)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
             }
-            .padding(16)
-            .frame(minHeight: 100)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(ticketBackgroundColor)
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(cardBackgroundColor)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(ticketBorderColor, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(cardBorderColor, lineWidth: 1)
                     )
+                    .shadow(color: shadowColor, radius: 8, x: 0, y: 4)
             )
         }
         .buttonStyle(PlainButtonStyle())
     }
     
-    private var ticketBackgroundColor: Color {
-        if isSelected {
-            return configuration.theme.primaryColor.opacity(0.1)
-        }
-        return configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.2)
-            : Color.white.opacity(0.6)
+    private var iconBackgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.7)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
     
-    private var ticketBorderColor: Color {
-        isSelected 
-            ? configuration.theme.primaryColor.opacity(0.4)
-            : Color.clear
+    private var cardBackgroundColor: Color {
+        configuration.theme.mode == .dark
+            ? Color(.systemGray6).opacity(0.3)
+            : Color.white
+    }
+    
+    private var cardBorderColor: Color {
+        configuration.theme.borderColor.opacity(0.1)
+    }
+    
+    private var shadowColor: Color {
+        configuration.theme.mode == .dark
+            ? Color.black.opacity(0.3)
+            : Color.black.opacity(0.1)
+    }
+    
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        guard let date = formatter.date(from: dateString) else {
+            return dateString
+        }
+        
+        let displayFormatter = DateFormatter()
+        displayFormatter.dateStyle = .medium
+        displayFormatter.timeStyle = .short
+        return displayFormatter.string(from: date)
     }
 }
 
-// MARK: - Status Badge
+// MARK: - Enhanced Status Badge
 struct StatusBadge: View {
     let status: TicketStatus
     let configuration: HelpCenterConfiguration
     
     var body: some View {
-        Text(status.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundColor(textColor)
-            .textCase(.uppercase)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(backgroundColor)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(borderColor, lineWidth: 1)
-                    )
-            )
+        HStack(spacing: 6) {
+            Circle()
+                .fill(statusColor)
+                .frame(width: 8, height: 8)
+            
+            Text(statusText)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(statusColor)
+                .textCase(.uppercase)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(statusColor.opacity(0.15))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(statusColor.opacity(0.3), lineWidth: 1)
+                )
+        )
     }
     
-    private var colors: (text: Color, background: Color, border: Color) {
+    private var statusText: String {
         switch status {
-        case .new, .open:
-            return (.blue, .blue.opacity(0.1), .blue.opacity(0.3))
-        case .inProgress:
-            return (.orange, .orange.opacity(0.1), .orange.opacity(0.3))
-        case .resolved, .closed:
-            return (.green, .green.opacity(0.1), .green.opacity(0.3))
-        case .onHold:
-            return (.gray, .gray.opacity(0.1), .gray.opacity(0.3))
-        @unknown default:
-            return (.gray, .gray.opacity(0.1), .gray.opacity(0.3))
+        case .new: return "New"
+        case .open: return "Open"
+        case .inProgress: return "In Progress"
+        case .onHold: return "On Hold"
+        case .resolved: return "Resolved"
+        case .closed: return "Closed"
+        @unknown default: return "Unknown"
         }
     }
     
-    private var textColor: Color { colors.text }
-    private var backgroundColor: Color { colors.background }
-    private var borderColor: Color { colors.border }
+    private var statusColor: Color {
+        switch status {
+        case .new, .open: return .blue
+        case .inProgress: return .orange
+        case .resolved, .closed: return .green
+        case .onHold: return .gray
+        @unknown default: return .gray
+        }
+    }
+}
+
+// MARK: - Priority Indicator
+struct PriorityIndicator: View {
+    let priority: TicketPriority
+    let configuration: HelpCenterConfiguration
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<priorityLevel, id: \.self) { _ in
+                Circle()
+                    .fill(priorityColor)
+                    .frame(width: 6, height: 6)
+            }
+            
+            ForEach(priorityLevel..<4, id: \.self) { _ in
+                Circle()
+                    .fill(priorityColor.opacity(0.2))
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(priorityColor.opacity(0.1))
+        )
+    }
+    
+    private var priorityLevel: Int {
+        switch priority {
+        case .low: return 1
+        case .medium: return 2
+        case .high: return 3
+        case .urgent: return 4
+        @unknown default: return 1
+        }
+    }
+    
+    private var priorityColor: Color {
+        switch priority {
+        case .low: return .green
+        case .medium: return .yellow
+        case .high: return .orange
+        case .urgent: return .red
+        @unknown default: return .blue
+        }
+    }
+}
+
+// MARK: - Enhanced Skeleton Ticket Card View
+struct SkeletonTicketCardView: View {
+    let configuration: HelpCenterConfiguration
+    @State private var animationOffset: CGFloat = -200
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                HStack(spacing: 12) {
+                    SkeletonCircle(size: 44)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        SkeletonLine(width: 80, height: 16)
+                        SkeletonLine(width: 120, height: 12)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(spacing: 8) {
+                    SkeletonLine(width: 60, height: 20)
+                    SkeletonLine(width: 40, height: 16)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+            
+            // Content
+            VStack(alignment: .leading, spacing: 12) {
+                SkeletonLine(width: nil, height: 18)
+                SkeletonLine(width: 200, height: 14)
+                SkeletonLine(width: 150, height: 14)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(skeletonBackgroundColor)
+        )
+    }
+    
+    private var skeletonBackgroundColor: Color {
+        configuration.theme.mode == .dark
+            ? Color(.systemGray6).opacity(0.3)
+            : Color.white
+    }
+}
+
+// MARK: - Skeleton Components
+struct SkeletonLine: View {
+    let width: CGFloat?
+    let height: CGFloat
+    @State private var animationOffset: CGFloat = -200
+    
+    var body: some View {
+        RoundedRectangle(cornerRadius: height / 2)
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color(.systemGray4).opacity(0.3),
+                        Color(.systemGray3).opacity(0.5),
+                        Color(.systemGray4).opacity(0.3)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: width, height: height)
+            .clipped()
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        Color.clear,
+                        Color.white.opacity(0.4),
+                        Color.clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .offset(x: animationOffset)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    animationOffset = 200
+                }
+            }
+    }
+}
+
+struct SkeletonCircle: View {
+    let size: CGFloat
+    @State private var animationOffset: CGFloat = -200
+    
+    var body: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: [
+                        Color(.systemGray4).opacity(0.3),
+                        Color(.systemGray3).opacity(0.5),
+                        Color(.systemGray4).opacity(0.3)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: size, height: size)
+            .clipped()
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        Color.clear,
+                        Color.white.opacity(0.4),
+                        Color.clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .offset(x: animationOffset)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    animationOffset = 200
+                }
+            }
+    }
 }
 
 // MARK: - Priority Badge
 struct PriorityBadge: View {
     let priority: TicketPriority
     let configuration: HelpCenterConfiguration
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Circle()
@@ -414,7 +754,7 @@ struct PriorityBadge: View {
                 )
         )
     }
-    
+
     private var dotColor: Color {
         switch priority {
         case .low: return .green
@@ -425,6 +765,17 @@ struct PriorityBadge: View {
             return .blue
         }
     }
+
+//    private var dotColor: Color {
+//        switch priority {
+//        case "LOW": return .green
+//        case "MEDIUM": return .yellow
+//        case "HIGH": return .orange
+//        case "URGENT": return .red
+//        default:
+//            return .blue
+//        }
+//    }
     
     private var backgroundColor: Color {
         configuration.theme.mode == .dark
@@ -433,79 +784,3 @@ struct PriorityBadge: View {
     }
 }
 
-// MARK: - Skeleton Ticket View
-struct SkeletonTicketView: View {
-    let configuration: HelpCenterConfiguration
-    @State private var animationOffset: CGFloat = -200
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                SkeletonLine(width: 80, height: 16)
-                Spacer()
-                SkeletonLine(width: 60, height: 12)
-            }
-            
-            SkeletonLine(width: nil, height: 14)
-            SkeletonLine(width: 120, height: 14)
-        }
-        .padding(16)
-        .frame(minHeight: 100)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(skeletonBackgroundColor)
-        )
-        .onAppear {
-            withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-                animationOffset = 200
-            }
-        }
-    }
-    
-    private var skeletonBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.2)
-            : Color.white.opacity(0.6)
-    }
-}
-
-// MARK: - Skeleton Line
-struct SkeletonLine: View {
-    let width: CGFloat?
-    let height: CGFloat
-    @State private var animationOffset: CGFloat = -200
-    
-    var body: some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color(.systemGray4).opacity(0.3),
-                        Color(.systemGray3).opacity(0.2),
-                        Color(.systemGray4).opacity(0.3)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(width: width, height: height)
-            .clipped()
-            .overlay(
-                LinearGradient(
-                    colors: [
-                        Color.clear,
-                        Color.white.opacity(0.3),
-                        Color.clear
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .offset(x: animationOffset)
-            )
-            .onAppear {
-                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
-                    animationOffset = 200
-                }
-            }
-    }
-}

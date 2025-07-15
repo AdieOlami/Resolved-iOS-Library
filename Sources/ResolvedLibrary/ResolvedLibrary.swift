@@ -22,6 +22,7 @@ public struct ResolvedLibrary {
     @MainActor public static func knowledgeBase(configuration: HelpCenterConfiguration) -> some View {
         KnowledgeBaseView(
             configuration: configuration,
+            routes: .constant(NavigationPath()),
             onBack: {}
         )
     }
@@ -35,6 +36,7 @@ public struct ResolvedLibrary {
         TicketSystemView(
             configuration: configuration,
             userId: userId,
+            routes: .constant(NavigationPath()),
             onBack: {}
         )
     }
@@ -78,6 +80,7 @@ public extension HelpCenterConfiguration {
             customerId: customerId,
             customerEmail: customerEmail,
             customerName: customerName,
+            includeKnowledgeBase: true,
             theme: theme
         )
     }
@@ -146,14 +149,25 @@ public struct ResolvedLibrary_Previews: PreviewProvider {
     public static var previews: some View {
         Group {
             // Light Theme Preview
+//            ResolvedLibrary.helpCenter(
+//                configuration: .development(
+//                    apiKey: "preview-key",
+//                    baseURL: URL(string: "https://api.example.com")!,
+//                    customerId: "preview-user",
+//                    customerEmail: "user@example.com",
+//                    customerName: "Preview User",
+//                    theme: .light(primaryColor: .blue)
+//                )
+//            )
+//            .previewDisplayName("Light Theme")
             ResolvedLibrary.helpCenter(
-                configuration: .development(
-                    apiKey: "preview-key",
-                    baseURL: URL(string: "https://api.example.com")!,
+                configuration: .production(
+                    apiKey: "01JWQ9DPSZ2M3HFXTN31FRVFV5",
+            //                    baseURL: URL(string: "https://api.example.com")!,
                     customerId: "preview-user",
                     customerEmail: "user@example.com",
                     customerName: "Preview User",
-                    theme: .light(primaryColor: .blue)
+                    theme: .light(primaryColor: .blue),
                 )
             )
             .previewDisplayName("Light Theme")
