@@ -17,40 +17,54 @@ public struct ResolvedLibrary {
     }
     
     /// Creates a standalone Knowledge Base view
-    /// - Parameter configuration: Configuration settings
+    /// - Parameters:
+    ///   - configuration: Configuration settings
+    ///   - onDismiss: Handle dismiss
     /// - Returns: A SwiftUI view for browsing knowledge base articles
-    @MainActor public static func knowledgeBase(configuration: HelpCenterConfiguration) -> some View {
-        KnowledgeBaseView(
-            configuration: configuration,
-            routes: .constant(NavigationPath()),
-            onBack: {}
-        )
+    @MainActor public static func knowledgeBase(configuration: HelpCenterConfiguration, onDismiss: (() -> Void)? = nil) -> some View {
+        NavigationStack {
+            KnowledgeBaseView(
+                configuration: configuration,
+                routes: .constant(NavigationPath()),
+                onBack: {
+                    onDismiss?()
+                }
+            )
+        }
     }
     
     /// Creates a standalone Ticket System view
     /// - Parameters:
     ///   - configuration: Configuration settings
     ///   - userId: The user ID for fetching tickets
+    ///   - onDismiss: Handle dismiss
     /// - Returns: A SwiftUI view for managing support tickets
-    @MainActor public static func ticketSystem(configuration: HelpCenterConfiguration, userId: String) -> some View {
-        TicketSystemView(
-            configuration: configuration,
-            userId: userId,
-            routes: .constant(NavigationPath()),
-            onBack: {}
-        )
+    @MainActor public static func ticketSystem(configuration: HelpCenterConfiguration, userId: String, onDismiss: (() -> Void)? = nil) -> some View {
+        NavigationStack {
+            TicketSystemView(
+                configuration: configuration,
+                userId: userId,
+                routes: .constant(NavigationPath()),
+                onBack: {
+                    onDismiss?()
+                }
+            )
+        }
     }
     
     /// Creates a standalone Create Ticket view
     /// - Parameters:
     ///   - configuration: Configuration settings
     ///   - userId: The user ID for creating the ticket
+    ///   - onDismiss: Handle dismiss
     /// - Returns: A SwiftUI view for creating new support tickets
-    @MainActor public static func createTicket(configuration: HelpCenterConfiguration, userId: String) -> some View {
+    @MainActor public static func createTicket(configuration: HelpCenterConfiguration, userId: String, onDismiss: (() -> Void)? = nil) -> some View {
         CreateTicketView(
             configuration: configuration,
             userId: userId,
-            onBack: {}
+            onBack: {
+                onDismiss?()
+            }
         )
     }
 }
