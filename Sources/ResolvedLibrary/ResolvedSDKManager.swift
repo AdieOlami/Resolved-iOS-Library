@@ -26,7 +26,7 @@ public class ResolvedSDKManager: ObservableObject {
     @Published public var selectedTicket: Ticket?
 
     // Loading States
-    @Published public var isLoadingOrganization = false
+    @Published public var isLoadingOrganization = true
     @Published public var isLoadingFAQs = true
     @Published public var isLoadingTickets = true
     @Published public var isLoadingCollections = true

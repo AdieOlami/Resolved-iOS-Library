@@ -5,8 +5,8 @@
 //  Created by Olami on 2025-07-13.
 //
 
-import SwiftUI
 @_exported import Resolved
+import SwiftUI
 
 // MARK: - Create Ticket View
 
@@ -14,7 +14,7 @@ struct CreateTicketView: View {
     let configuration: HelpCenterConfiguration
     let userId: String
     let onBack: () -> Void
-    
+
     @StateObject private var sdkManager = ResolvedSDKManager()
     @State private var formData = CreateTicketFormData()
     @State private var isSubmitting = false
@@ -25,28 +25,28 @@ struct CreateTicketView: View {
     @State private var showingFilePicker = false
     @State private var focusedField: FormField?
     @Environment(\.colorScheme) private var colorScheme
-    
+
     enum FormField: CaseIterable {
         case title, category, priority, description
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
             headerView
-            
+
             // Content
             ScrollView {
                 LazyVStack(spacing: 24) {
                     // Hero Section
                     heroSection
-                    
+
                     // Form Card
                     formCard
-                    
+
                     // File Upload Section
-//                    fileUploadCard
-                    
+                    //                    fileUploadCard
+
                     // Submit Section
                     submitSection
                 }
@@ -64,7 +64,7 @@ struct CreateTicketView: View {
             await setupSDK()
         }
     }
-    
+
     // MARK: - Header View
     private var headerView: some View {
         HStack {
@@ -72,21 +72,21 @@ struct CreateTicketView: View {
                 Text("Create Ticket")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(configuration.theme.textColor)
-                
+
                 Text("Get expert help from our support team")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(configuration.theme.secondaryColor)
             }
-            
+
             Spacer()
-            
+
             // Back button
             Button(action: onBack) {
                 ZStack {
                     Circle()
                         .fill(configuration.theme.primaryColor.opacity(0.1))
                         .frame(width: 40, height: 40)
-                    
+
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(configuration.theme.primaryColor)
@@ -104,7 +104,7 @@ struct CreateTicketView: View {
             alignment: .bottom
         )
     }
-    
+
     // MARK: - Hero Section
     private var heroSection: some View {
         VStack(spacing: 20) {
@@ -112,36 +112,40 @@ struct CreateTicketView: View {
                 Circle()
                     .fill(iconBackgroundGradient)
                     .frame(width: 80, height: 80)
-                    .shadow(color: configuration.theme.primaryColor.opacity(0.3), radius: 12, x: 0, y: 6)
-                
+                    .shadow(
+                        color: configuration.theme.primaryColor.opacity(0.3), radius: 12, x: 0, y: 6
+                    )
+
                 Image(systemName: "headphones.circle.fill")
                     .font(.system(size: 40, weight: .bold))
                     .foregroundColor(.white)
             }
-            
+
             VStack(spacing: 12) {
                 Text("How can we help you?")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(configuration.theme.textColor)
                     .multilineTextAlignment(.center)
-                
-                Text("Describe your issue and we'll get back to you as soon as possible. Our support team is standing by to help.")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(configuration.theme.secondaryColor)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
+
+                Text(
+                    "Describe your issue and we'll get back to you as soon as possible. Our support team is standing by to help."
+                )
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(configuration.theme.secondaryColor)
+                .multilineTextAlignment(.center)
+                .lineLimit(nil)
             }
         }
         .padding(.horizontal, 20)
         .padding(.top, 30)
     }
-    
+
     // MARK: - Form Card
     private var formCard: some View {
         VStack(spacing: 24) {
             // Progress Indicator
             progressIndicator
-            
+
             // Form Fields
             VStack(spacing: 20) {
                 // Subject Field
@@ -161,14 +165,18 @@ struct CreateTicketView: View {
                                 .fill(fieldBackgroundColor)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16)
-                                        .stroke(focusedField == .title ? configuration.theme.primaryColor : configuration.theme.borderColor.opacity(0.2), lineWidth: focusedField == .title ? 2 : 1)
+                                        .stroke(
+                                            focusedField == .title
+                                                ? configuration.theme.primaryColor
+                                                : configuration.theme.borderColor.opacity(0.2),
+                                            lineWidth: focusedField == .title ? 2 : 1)
                                 )
                         )
                         .onTapGesture {
                             focusedField = .title
                         }
                 }
-                
+
                 // Category and Priority Row
                 HStack(spacing: 16) {
                     FormFieldView(
@@ -179,7 +187,7 @@ struct CreateTicketView: View {
                     ) {
                         categoryPicker
                     }
-                    
+
                     FormFieldView(
                         title: "Priority",
                         isRequired: true,
@@ -189,7 +197,7 @@ struct CreateTicketView: View {
                         priorityPicker
                     }
                 }
-                
+
                 // Description Field
                 FormFieldView(
                     title: "Description",
@@ -199,13 +207,15 @@ struct CreateTicketView: View {
                 ) {
                     ZStack(alignment: .topLeading) {
                         if formData.description.isEmpty {
-                            Text("Please provide detailed information about your issue. Include steps to reproduce, error messages, and any relevant context...")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(configuration.theme.secondaryColor.opacity(0.7))
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 16)
+                            Text(
+                                "Please provide detailed information about your issue. Include steps to reproduce, error messages, and any relevant context..."
+                            )
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(configuration.theme.secondaryColor.opacity(0.7))
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
                         }
-                        
+
                         TextEditor(text: $formData.description)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(configuration.theme.textColor)
@@ -223,7 +233,11 @@ struct CreateTicketView: View {
                             .fill(fieldBackgroundColor)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
-                                    .stroke(focusedField == .description ? configuration.theme.primaryColor : configuration.theme.borderColor.opacity(0.2), lineWidth: focusedField == .description ? 2 : 1)
+                                    .stroke(
+                                        focusedField == .description
+                                            ? configuration.theme.primaryColor
+                                            : configuration.theme.borderColor.opacity(0.2),
+                                        lineWidth: focusedField == .description ? 2 : 1)
                             )
                     )
                 }
@@ -236,7 +250,7 @@ struct CreateTicketView: View {
                 .shadow(color: shadowColor, radius: 12, x: 0, y: 6)
         )
     }
-    
+
     // MARK: - Progress Indicator
     private var progressIndicator: some View {
         VStack(spacing: 12) {
@@ -245,36 +259,42 @@ struct CreateTicketView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(configuration.theme.secondaryColor)
                     .textCase(.uppercase)
-                
+
                 Spacer()
-                
+
                 Text("\(formCompletionPercentage)% Complete")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(configuration.theme.primaryColor)
             }
-            
+
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(configuration.theme.borderColor.opacity(0.2))
                         .frame(height: 8)
-                    
+
                     RoundedRectangle(cornerRadius: 8)
                         .fill(
                             LinearGradient(
-                                colors: [configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.7)],
+                                colors: [
+                                    configuration.theme.primaryColor,
+                                    configuration.theme.primaryColor.opacity(0.7),
+                                ],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: geometry.size.width * CGFloat(formCompletionPercentage) / 100, height: 8)
+                        .frame(
+                            width: geometry.size.width * CGFloat(formCompletionPercentage) / 100,
+                            height: 8
+                        )
                         .animation(.easeInOut(duration: 0.3), value: formCompletionPercentage)
                 }
             }
             .frame(height: 8)
         }
     }
-    
+
     // MARK: - Category Picker
     private var categoryPicker: some View {
         Menu {
@@ -289,10 +309,13 @@ struct CreateTicketView: View {
             HStack {
                 Text(categoryDisplayText)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(formData.category.isEmpty ? configuration.theme.secondaryColor.opacity(0.7) : configuration.theme.textColor)
-                
+                    .foregroundColor(
+                        formData.category.isEmpty
+                            ? configuration.theme.secondaryColor.opacity(0.7)
+                            : configuration.theme.textColor)
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.down")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(configuration.theme.secondaryColor)
@@ -309,7 +332,7 @@ struct CreateTicketView: View {
             )
         }
     }
-    
+
     // MARK: - Priority Picker
     private var priorityPicker: some View {
         Menu {
@@ -321,10 +344,13 @@ struct CreateTicketView: View {
             HStack {
                 Text(priorityDisplayText)
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(formData.priority.isEmpty ? configuration.theme.secondaryColor.opacity(0.7) : configuration.theme.textColor)
-                
+                    .foregroundColor(
+                        formData.priority.isEmpty
+                            ? configuration.theme.secondaryColor.opacity(0.7)
+                            : configuration.theme.textColor)
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.down")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(configuration.theme.secondaryColor)
@@ -341,7 +367,7 @@ struct CreateTicketView: View {
             )
         }
     }
-    
+
     // MARK: - File Upload Card
     private var fileUploadCard: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -349,13 +375,15 @@ struct CreateTicketView: View {
                 Text("Attachments")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(configuration.theme.textColor)
-                
-                Text("Add screenshots, logs, or other files to help us understand your issue better")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(configuration.theme.secondaryColor)
-                    .lineLimit(nil)
+
+                Text(
+                    "Add screenshots, logs, or other files to help us understand your issue better"
+                )
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(configuration.theme.secondaryColor)
+                .lineLimit(nil)
             }
-            
+
             // Upload Area
             Button(action: { showingFilePicker = true }) {
                 VStack(spacing: 16) {
@@ -363,20 +391,22 @@ struct CreateTicketView: View {
                         Circle()
                             .fill(uploadIconBackgroundGradient)
                             .frame(width: 64, height: 64)
-                            .shadow(color: configuration.theme.primaryColor.opacity(0.2), radius: 8, x: 0, y: 4)
-                        
+                            .shadow(
+                                color: configuration.theme.primaryColor.opacity(0.2), radius: 8,
+                                x: 0, y: 4)
+
                         Image(systemName: "icloud.and.arrow.up.fill")
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.white)
                     }
                     .scaleEffect(isDragOver ? 1.1 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragOver)
-                    
+
                     VStack(spacing: 8) {
                         Text(isDragOver ? "Drop files here" : "Upload Files")
                             .font(.system(size: 18, weight: .bold))
                             .foregroundColor(configuration.theme.textColor)
-                        
+
                         Text("PNG, JPG, PDF, TXT up to 10MB each")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(configuration.theme.secondaryColor)
@@ -389,12 +419,15 @@ struct CreateTicketView: View {
                         .fill(uploadBackgroundColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(uploadBorderColor, style: StrokeStyle(lineWidth: 2, dash: isDragOver ? [] : [8, 4]))
+                                .stroke(
+                                    uploadBorderColor,
+                                    style: StrokeStyle(
+                                        lineWidth: 2, dash: isDragOver ? [] : [8, 4]))
                         )
                 )
             }
             .buttonStyle(PlainButtonStyle())
-            
+
             // Uploaded Files
             if !uploadedFiles.isEmpty {
                 VStack(spacing: 12) {
@@ -417,20 +450,22 @@ struct CreateTicketView: View {
                 .shadow(color: shadowColor, radius: 12, x: 0, y: 6)
         )
     }
-    
+
     // MARK: - Submit Section
     private var submitSection: some View {
         VStack(spacing: 16) {
             if showingSuccess {
                 SuccessMessageView(configuration: configuration)
-                    .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                    .transition(
+                        .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
             }
-            
+
             if let error = errorMessage {
                 ErrorMessageView(message: error, configuration: configuration)
-                    .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                    .transition(
+                        .asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
             }
-            
+
             Button(action: submitTicket) {
                 HStack(spacing: 12) {
                     if isSubmitting {
@@ -440,7 +475,7 @@ struct CreateTicketView: View {
                     } else {
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 16, weight: .bold))
-                        
+
                         Text("Create Ticket")
                             .font(.system(size: 18, weight: .bold))
                     }
@@ -460,7 +495,7 @@ struct CreateTicketView: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSubmitting)
         }
     }
-    
+
     // MARK: - Helper Methods
     private func setupSDK() async {
         var config = configuration
@@ -482,17 +517,17 @@ struct CreateTicketView: View {
             enableOfflineQueue: configuration.enableOfflineQueue,
             loggingEnabled: configuration.loggingEnabled
         )
-        
+
         await sdkManager.initialize(with: config)
     }
-    
+
     private func submitTicket() {
         guard isFormValid else { return }
-        
+
         hideKeyboard()
         isSubmitting = true
         errorMessage = nil
-        
+
         let request = CreateTicketRequest(
             title: formData.title,
             description: formData.description,
@@ -504,17 +539,17 @@ struct CreateTicketView: View {
             customerMetadata: configuration.customerMetadata?.compactMapValues { AnyCodable($0) },
             channel: "SDK_MOBILE"
         )
-        
+
         Task {
             do {
                 _ = try await sdkManager.createTicket(request: request)
-                
+
                 await MainActor.run {
                     isSubmitting = false
                     showingSuccess = true
                     formData = CreateTicketFormData()
                     uploadedFiles = []
-                    
+
                     // Auto-hide success message after 5 seconds
                     DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
                         showingSuccess = false
@@ -528,32 +563,36 @@ struct CreateTicketView: View {
             }
         }
     }
-    
+
     private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         focusedField = nil
     }
-    
+
     // MARK: - Computed Properties
     private var isFormValid: Bool {
-        !formData.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !formData.category.isEmpty &&
-        !formData.priority.isEmpty &&
-        !formData.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !formData.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !formData.category.isEmpty && !formData.priority.isEmpty
+            && !formData.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    
+
     private var formCompletionPercentage: Int {
         var completed = 0
         let totalFields = 4
-        
-        if !formData.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { completed += 1 }
+
+        if !formData.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            completed += 1
+        }
         if !formData.category.isEmpty { completed += 1 }
         if !formData.priority.isEmpty { completed += 1 }
-        if !formData.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { completed += 1 }
-        
+        if !formData.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            completed += 1
+        }
+
         return Int((Double(completed) / Double(totalFields)) * 100)
     }
-    
+
     private var categoryDisplayText: String {
         switch formData.category {
         case "technical": return "🔧 Technical Issue"
@@ -566,7 +605,7 @@ struct CreateTicketView: View {
         default: return "Select Category"
         }
     }
-    
+
     private var priorityDisplayText: String {
         switch formData.priority {
         case "low": return "🟢 Low"
@@ -576,32 +615,34 @@ struct CreateTicketView: View {
         default: return "Select Priority"
         }
     }
-    
+
     // MARK: - Color Properties
     private var headerBackgroundColor: Color {
         configuration.theme.effectiveBackgroundColor(for: colorScheme)
     }
-    
+
     private var cardBackgroundColor: Color {
         configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
-    
+
     private var fieldBackgroundColor: Color {
         configuration.theme.adaptiveInputBackground(for: colorScheme)
     }
-    
+
     private var shadowColor: Color {
         configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
-    
+
     private var iconBackgroundGradient: LinearGradient {
         LinearGradient(
-            colors: [configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.7)],
+            colors: [
+                configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.7),
+            ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var uploadIconBackgroundGradient: LinearGradient {
         LinearGradient(
             colors: [Color.blue, Color.blue.opacity(0.7)],
@@ -609,29 +650,32 @@ struct CreateTicketView: View {
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var uploadBackgroundColor: Color {
         if isDragOver {
             return Color.blue.opacity(0.1)
         }
         return configuration.theme.adaptiveInputBackground(for: colorScheme)
     }
-    
+
     private var uploadBorderColor: Color {
         isDragOver ? Color.blue : Color.blue.opacity(0.3)
     }
-    
+
     private var submitButtonGradient: LinearGradient {
         if isSubmitting || !isFormValid {
-            return LinearGradient(colors: [Color.gray, Color.gray], startPoint: .leading, endPoint: .trailing)
+            return LinearGradient(
+                colors: [Color.gray, Color.gray], startPoint: .leading, endPoint: .trailing)
         }
         return LinearGradient(
-            colors: [configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.8)],
+            colors: [
+                configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.8),
+            ],
             startPoint: .leading,
             endPoint: .trailing
         )
     }
-    
+
     private var submitButtonShadowColor: Color {
         if isSubmitting || !isFormValid {
             return Color.clear
@@ -656,23 +700,23 @@ struct FormFieldView<Content: View>: View {
     let isFocused: Bool
     @ViewBuilder let content: Content
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Text(title)
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(configuration.theme.effectiveTextColor(for: colorScheme))
-                
+
                 if isRequired {
                     Text("*")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.red)
                 }
-                
+
                 Spacer()
             }
-            
+
             content
         }
         .animation(.easeInOut(duration: 0.2), value: isFocused)
@@ -693,7 +737,7 @@ struct FileItemView: View {
     let configuration: HelpCenterConfiguration
     let onRemove: () -> Void
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         HStack(spacing: 16) {
             // File Icon
@@ -702,33 +746,33 @@ struct FileItemView: View {
                     .fill(fileIconGradient)
                     .frame(width: 48, height: 48)
                     .shadow(color: fileIconColor.opacity(0.3), radius: 4, x: 0, y: 2)
-                
+
                 Image(systemName: fileIcon)
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.white)
             }
-            
+
             // File Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(file.name)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(configuration.theme.textColor)
                     .lineLimit(1)
-                
+
                 Text(formatFileSize(file.size))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(configuration.theme.secondaryColor)
             }
-            
+
             Spacer()
-            
+
             // Remove Button
             Button(action: onRemove) {
                 ZStack {
                     Circle()
                         .fill(Color.red.opacity(0.1))
                         .frame(width: 32, height: 32)
-                    
+
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(.red)
@@ -746,7 +790,7 @@ struct FileItemView: View {
                 )
         )
     }
-    
+
     private var fileIcon: String {
         switch file.type.lowercased() {
         case "pdf": return "doc.fill"
@@ -755,7 +799,7 @@ struct FileItemView: View {
         default: return "doc.fill"
         }
     }
-    
+
     private var fileIconColor: Color {
         switch file.type.lowercased() {
         case "pdf": return .red
@@ -764,7 +808,7 @@ struct FileItemView: View {
         default: return .gray
         }
     }
-    
+
     private var fileIconGradient: LinearGradient {
         LinearGradient(
             colors: [fileIconColor, fileIconColor.opacity(0.7)],
@@ -772,11 +816,11 @@ struct FileItemView: View {
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var fileItemBackgroundColor: Color {
         configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.3)
     }
-    
+
     private func formatFileSize(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
@@ -790,7 +834,7 @@ struct ErrorMessageView: View {
     let message: String
     let configuration: HelpCenterConfiguration
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -798,23 +842,23 @@ struct ErrorMessageView: View {
                     .fill(errorGradient)
                     .frame(width: 48, height: 48)
                     .shadow(color: Color.red.opacity(0.3), radius: 8, x: 0, y: 4)
-                
+
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("Error")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.red)
-                
+
                 Text(message)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(configuration.theme.textColor)
                     .lineLimit(nil)
             }
-            
+
             Spacer()
         }
         .padding(20)
@@ -827,7 +871,7 @@ struct ErrorMessageView: View {
                 )
         )
     }
-    
+
     private var errorGradient: LinearGradient {
         LinearGradient(
             colors: [Color.red, Color.red.opacity(0.7)],
@@ -835,7 +879,7 @@ struct ErrorMessageView: View {
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var errorBackgroundColor: Color {
         Color.red.opacity(colorScheme == .dark ? 0.1 : 0.05)
     }
@@ -846,7 +890,7 @@ struct ErrorMessageView: View {
 struct SuccessMessageView: View {
     let configuration: HelpCenterConfiguration
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -854,23 +898,23 @@ struct SuccessMessageView: View {
                     .fill(successGradient)
                     .frame(width: 48, height: 48)
                     .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
-                
+
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(.white)
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("Success!")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.green)
-                
+
                 Text("Your ticket has been created successfully! We'll get back to you soon.")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(configuration.theme.textColor)
                     .lineLimit(nil)
             }
-            
+
             Spacer()
         }
         .padding(20)
@@ -883,7 +927,7 @@ struct SuccessMessageView: View {
                 )
         )
     }
-    
+
     private var successGradient: LinearGradient {
         LinearGradient(
             colors: [Color.green, Color.green.opacity(0.7)],
@@ -891,7 +935,7 @@ struct SuccessMessageView: View {
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var successBackgroundColor: Color {
         Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
     }

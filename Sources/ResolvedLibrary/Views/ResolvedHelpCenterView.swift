@@ -5,36 +5,36 @@
 //  Created by Olami on 2025-07-13.
 //
 
-import SwiftUI
 @_exported import Resolved
+import SwiftUI
 
 // MARK: - Main Help Center View
 public struct ResolvedHelpCenterView: View {
     // Configuration
     public let configuration: HelpCenterConfiguration
-    
+
     // Internal state
     @State private var routes = NavigationPath()
-    
+
     @State private var searchQuery: String = ""
     @State private var isSearching: Bool = false
     @State private var openFAQIndex: Int? = 0
     @Environment(\.colorScheme) private var colorScheme
-    
+
     // SDK instance
     @StateObject private var sdkManager = ResolvedSDKManager()
-    
+
     public init(configuration: HelpCenterConfiguration) {
         self.configuration = configuration
     }
-    
+
     public var body: some View {
         NavigationStack(path: $routes) {
             ZStack {
                 // Background
                 configuration.theme.effectiveBackgroundColor(for: colorScheme)
                     .ignoresSafeArea()
-                
+
                 if let organization = sdkManager.organization {
                     if organization.capabilities.contains("use_sdk") {
                         // Normal help center content
@@ -101,7 +101,7 @@ public struct ResolvedHelpCenterView: View {
             await setupSDK()
         }
     }
-    
+
     // MARK: - Home View
     private var homeView: some View {
         ScrollView {
@@ -113,19 +113,21 @@ public struct ResolvedHelpCenterView: View {
                     isSearching: $isSearching,
                     onSearch: handleSearch
                 )
-                
+
                 // Action Cards
-//                if shouldShowActionCards {
-                    ActionCardsView(
-                        configuration: configuration,
-                        onNavigate: { view in
-                            routes.append(view)
-                        }
-                    )
-//                }
-                
+                //                if shouldShowActionCards {
+                ActionCardsView(
+                    configuration: configuration,
+                    onNavigate: { view in
+                        routes.append(view)
+                    }
+                )
+                //                }
+
                 // FAQ Section
-                if configuration.includeFAQs && sdkManager.organization?.capabilities.contains("use_faq") == true {
+                if configuration.includeFAQs
+                    && sdkManager.organization?.capabilities.contains("use_faq") == true
+                {
                     FAQSectionView(
                         configuration: configuration,
                         searchQuery: searchQuery,
@@ -141,21 +143,21 @@ public struct ResolvedHelpCenterView: View {
             await refreshMainContent()
         }
     }
-    
+
     private var serviceUnavailableView: some View {
         ScrollView {
             VStack(spacing: 20) {
                 serviceUnavailableContent
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: UIScreen.main.bounds.height - 200) // Ensure enough height for pull-to-refresh
+            .frame(minHeight: UIScreen.main.bounds.height - 200)  // Ensure enough height for pull-to-refresh
             .padding()
         }
         .refreshable {
             await refreshOrganizationCapabilities()
         }
     }
-    
+
     private var serviceUnavailableContent: some View {
         VStack(spacing: 24) {
             // Error Icon
@@ -163,32 +165,34 @@ public struct ResolvedHelpCenterView: View {
                 Circle()
                     .fill(errorIconBackgroundColor)
                     .frame(width: 80, height: 80)
-                
+
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 32))
                     .foregroundColor(.red)
             }
-            
+
             // Error Content
             VStack(spacing: 16) {
                 Text("Service Unavailable")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundColor(configuration.theme.textColor)
                     .multilineTextAlignment(.center)
-                
-                Text("The help center is temporarily unavailable. Please try again later or contact support directly.")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(configuration.theme.secondaryColor)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
-                
+
+                Text(
+                    "The help center is temporarily unavailable. Please try again later or contact support directly."
+                )
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(configuration.theme.secondaryColor)
+                .multilineTextAlignment(.center)
+                .lineLimit(nil)
+
                 // Organization status info (if available)
                 if let organization = sdkManager.organization {
                     VStack(spacing: 8) {
                         Text("Account Status: \(organization.status)")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(configuration.theme.secondaryColor)
-                        
+
                         Text("Plan: \(organization.planName)")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(configuration.theme.secondaryColor)
@@ -199,11 +203,12 @@ public struct ResolvedHelpCenterView: View {
                             .fill(statusBackgroundColor)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(configuration.theme.borderColor.opacity(0.2), lineWidth: 1)
+                                    .stroke(
+                                        configuration.theme.borderColor.opacity(0.2), lineWidth: 1)
                             )
                     )
                 }
-                
+
                 // Error message (if any)
                 if let error = sdkManager.organizationError {
                     Text("Error: \(error)")
@@ -220,7 +225,7 @@ public struct ResolvedHelpCenterView: View {
                                 )
                         )
                 }
-                
+
                 // Retry Button
                 Button(action: {
                     Task {
@@ -235,7 +240,7 @@ public struct ResolvedHelpCenterView: View {
                             Image(systemName: "arrow.clockwise")
                                 .font(.system(size: 14, weight: .semibold))
                         }
-                        
+
                         Text(sdkManager.isLoadingOrganization ? "Checking..." : "Try Again")
                             .font(.system(size: 16, weight: .semibold))
                     }
@@ -249,13 +254,13 @@ public struct ResolvedHelpCenterView: View {
                 }
                 .buttonStyle(PlainButtonStyle())
                 .disabled(sdkManager.isLoadingOrganization)
-                
+
                 // Pull to refresh hint
                 VStack(spacing: 4) {
                     Image(systemName: "arrow.down")
                         .font(.system(size: 12))
                         .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
-                    
+
                     Text("Pull down to refresh")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
@@ -273,43 +278,43 @@ public struct ResolvedHelpCenterView: View {
                 )
         )
     }
-    
+
     private var shouldShowActionCards: Bool {
         let hasKB = sdkManager.organization?.capabilities.contains("use_knowledgebase") == true
         let hasTickets = sdkManager.organization?.capabilities.contains("use_tickets") == true
         let hasCreate = sdkManager.organization?.capabilities.contains("use_tickets") == true
-        
+
         return hasKB || hasTickets || hasCreate
     }
-    
+
     // MARK: - Refresh Organization Capabilities
     @MainActor
     private func refreshOrganizationCapabilities() async {
         // Clear any existing error
         sdkManager.clearErrors()
-        
+
         // Reload organization data
         await sdkManager.loadOrganization()
-        
+
         // Wait for the operation to complete
         while sdkManager.isLoadingOrganization {
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+            try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1 second
         }
-        
+
         // Provide haptic feedback
         let impact = UIImpactFeedbackGenerator(style: .medium)
         impact.impactOccurred()
     }
-    
+
     // MARK: - Helper Methods
-    
+
     private func setupSDK() async {
         if sdkManager.organization == nil {
             await sdkManager.initialize(with: configuration)
         }
         await sdkManager.loadFAQs()
     }
-    
+
     private func handleSearch() async {
         guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             await MainActor.run {
@@ -317,46 +322,46 @@ public struct ResolvedHelpCenterView: View {
             }
             return
         }
-        
+
         await MainActor.run {
             isSearching = true
         }
-        
+
         await sdkManager.searchFAQs(query: searchQuery)
     }
-    
+
     private func refreshMainContent() async {
         // Refresh organization capabilities
         await sdkManager.loadOrganization()
-        
+
         // Refresh FAQs
         if configuration.includeFAQs {
             await sdkManager.loadFAQs()
         }
-        
+
         // Wait for completion
         while sdkManager.isLoadingFAQs || sdkManager.isLoadingOrganization {
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+            try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1 second
         }
     }
-    
+
     // MARK: - Computed Properties for Service Unavailable
     private var errorIconBackgroundColor: Color {
         configuration.theme.mode == .dark
-        ? Color.red.opacity(0.2)
-        : Color.red.opacity(0.1)
+            ? Color.red.opacity(0.2)
+            : Color.red.opacity(0.1)
     }
-    
+
     private var unavailableBackgroundColor: Color {
         configuration.theme.mode == .dark
-        ? Color(.systemGray6).opacity(0.3)
-        : Color.white.opacity(0.8)
+            ? Color(.systemGray6).opacity(0.3)
+            : Color.white.opacity(0.8)
     }
-    
+
     private var statusBackgroundColor: Color {
         configuration.theme.mode == .dark
-        ? Color(.systemGray5).opacity(0.3)
-        : Color(.systemGray6).opacity(0.5)
+            ? Color(.systemGray5).opacity(0.3)
+            : Color(.systemGray6).opacity(0.5)
     }
 }
 
@@ -368,7 +373,7 @@ struct HeroSectionView: View {
     @Binding var isSearching: Bool
     let onSearch: () async -> Void
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         VStack(spacing: 24) {
             VStack(spacing: 16) {
@@ -376,29 +381,34 @@ struct HeroSectionView: View {
                     .font(.system(size: 42, weight: .black, design: .default))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
-                
-                Text("Find answers, get support, and discover everything you need to succeed with our platform")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white.opacity(0.9))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(nil)
+
+                Text(
+                    "Find answers, get support, and discover everything you need to succeed with our platform"
+                )
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(.white.opacity(0.9))
+                .multilineTextAlignment(.center)
+                .lineLimit(nil)
             }
-            
+
             // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.white.opacity(0.8))
                     .font(.system(size: 16, weight: .medium))
-                
-                TextField("Search for help topics, articles, or troubleshooting guides...", text: $searchQuery)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .foregroundColor(.white)
-                    .font(.system(size: 16, weight: .medium))
-                    .onSubmit {
-                        Task {
-                            await onSearch()
-                        }
+
+                TextField(
+                    "Search for help topics, articles, or troubleshooting guides...",
+                    text: $searchQuery
+                )
+                .textFieldStyle(PlainTextFieldStyle())
+                .foregroundColor(.white)
+                .font(.system(size: 16, weight: .medium))
+                .onSubmit {
+                    Task {
+                        await onSearch()
                     }
+                }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -428,7 +438,7 @@ struct ActionCardsView: View {
     let onNavigate: (ViewType) -> Void
     @StateObject private var sdkManager = ResolvedSDKManager()
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // Section Header
@@ -437,44 +447,48 @@ struct ActionCardsView: View {
                     Text("How can we help?")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(configuration.theme.effectiveTextColor(for: colorScheme))
-                    
+
                     Text("Choose from the options below to get the help you need")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(configuration.theme.effectiveSecondaryColor(for: colorScheme))
+                        .foregroundColor(
+                            configuration.theme.effectiveSecondaryColor(for: colorScheme))
                 }
-                
+
                 Spacer()
             }
-            
+
             // Action Cards - Vertical Stack for Portrait
             VStack(spacing: 16) {
                 // Knowledge Base Card
                 ActionCard(
                     icon: "lightbulb.fill",
                     title: "Knowledge Base",
-                    description: "Explore our comprehensive collection of guides, tutorials, and documentation to find instant answers.",
+                    description:
+                        "Explore our comprehensive collection of guides, tutorials, and documentation to find instant answers.",
                     iconColor: .orange,
                     configuration: configuration
                 ) {
                     onNavigate(.knowledgeBase)
                 }
-                
+
                 // Create Ticket Card
                 ActionCard(
                     icon: "paperplane.fill",
                     title: "Get Support",
-                    description: "Need personalized assistance? Submit a support ticket and our expert team will help you promptly.",
+                    description:
+                        "Need personalized assistance? Submit a support ticket and our expert team will help you promptly.",
                     iconColor: .blue,
                     configuration: configuration
                 ) {
                     onNavigate(.createTicket)
                 }
-                
+
                 // Your Tickets Card
                 ActionCard(
                     icon: "ticket.fill",
                     title: "Your Tickets",
-                    description: "Track the progress of your support requests and communicate with our support team.",
+                    description:
+                        "Track the progress of your support requests and communicate with our support team.",
                     iconColor: .green,
                     configuration: configuration
                 ) {
@@ -494,9 +508,9 @@ struct ActionCard: View {
     let configuration: HelpCenterConfiguration
     let action: () -> Void
     @Environment(\.colorScheme) private var colorScheme
-    
+
     @State private var isPressed = false
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 20) {
@@ -506,36 +520,36 @@ struct ActionCard: View {
                         .fill(iconBackgroundGradient)
                         .frame(width: 64, height: 64)
                         .shadow(color: iconColor.opacity(0.3), radius: 8, x: 0, y: 4)
-                    
+
                     Image(systemName: icon)
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.white)
                 }
                 .scaleEffect(isPressed ? 0.9 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-                
+
                 // Content
                 VStack(alignment: .leading, spacing: 8) {
                     Text(title)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(configuration.theme.textColor)
                         .multilineTextAlignment(.leading)
-                    
+
                     Text(description)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(configuration.theme.secondaryColor)
                         .multilineTextAlignment(.leading)
                         .lineLimit(3)
                 }
-                
+
                 Spacer()
-                
+
                 // Arrow indicator
                 ZStack {
                     Circle()
                         .fill(configuration.theme.primaryColor.opacity(0.1))
                         .frame(width: 32, height: 32)
-                    
+
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(configuration.theme.primaryColor)
@@ -549,17 +563,20 @@ struct ActionCard: View {
                         RoundedRectangle(cornerRadius: 20)
                             .stroke(cardBorderColor, lineWidth: 1)
                     )
-                    .shadow(color: shadowColor, radius: isPressed ? 4 : 8, x: 0, y: isPressed ? 2 : 4)
+                    .shadow(
+                        color: shadowColor, radius: isPressed ? 4 : 8, x: 0, y: isPressed ? 2 : 4)
             )
             .scaleEffect(isPressed ? 0.98 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         }
         .buttonStyle(PlainButtonStyle())
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, perform: {}, onPressingChanged: { pressing in
-            isPressed = pressing
-        })
+        .onLongPressGesture(
+            minimumDuration: 0, maximumDistance: .infinity, perform: {},
+            onPressingChanged: { pressing in
+                isPressed = pressing
+            })
     }
-    
+
     private var iconBackgroundGradient: LinearGradient {
         LinearGradient(
             colors: [iconColor, iconColor.opacity(0.7)],
@@ -567,15 +584,15 @@ struct ActionCard: View {
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var cardBackgroundColor: Color {
         configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
-    
+
     private var cardBorderColor: Color {
         configuration.theme.effectiveBorderColor(for: colorScheme).opacity(0.15)
     }
-    
+
     private var shadowColor: Color {
         configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
@@ -585,7 +602,7 @@ struct ActionCard: View {
 struct CompactActionCardsView: View {
     let configuration: HelpCenterConfiguration
     let onNavigate: (ViewType) -> Void
-    
+
     var body: some View {
         VStack(spacing: 20) {
             // Section Header
@@ -593,16 +610,18 @@ struct CompactActionCardsView: View {
                 Text("Quick Actions")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(configuration.theme.textColor)
-                
+
                 Spacer()
             }
-            
+
             // Compact Cards in 2x2 Grid for Portrait
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
-                
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12),
+                ], spacing: 12
+            ) {
+
                 CompactActionCard(
                     icon: "lightbulb.fill",
                     title: "Knowledge Base",
@@ -611,7 +630,7 @@ struct CompactActionCardsView: View {
                 ) {
                     onNavigate(.knowledgeBase)
                 }
-                
+
                 CompactActionCard(
                     icon: "paperplane.fill",
                     title: "Get Support",
@@ -620,7 +639,7 @@ struct CompactActionCardsView: View {
                 ) {
                     onNavigate(.createTicket)
                 }
-                
+
                 CompactActionCard(
                     icon: "ticket.fill",
                     title: "Your Tickets",
@@ -629,7 +648,7 @@ struct CompactActionCardsView: View {
                 ) {
                     onNavigate(.tickets)
                 }
-                
+
                 CompactActionCard(
                     icon: "questionmark.circle.fill",
                     title: "FAQ",
@@ -650,10 +669,10 @@ struct CompactActionCard: View {
     let iconColor: Color
     let configuration: HelpCenterConfiguration
     let action: () -> Void
-    
+
     @State private var isPressed = false
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 16) {
@@ -663,14 +682,14 @@ struct CompactActionCard: View {
                         .fill(iconBackgroundGradient)
                         .frame(width: 56, height: 56)
                         .shadow(color: iconColor.opacity(0.3), radius: 6, x: 0, y: 3)
-                    
+
                     Image(systemName: icon)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.white)
                 }
                 .scaleEffect(isPressed ? 0.9 : 1.0)
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-                
+
                 // Title
                 Text(title)
                     .font(.system(size: 16, weight: .bold))
@@ -688,17 +707,20 @@ struct CompactActionCard: View {
                         RoundedRectangle(cornerRadius: 20)
                             .stroke(cardBorderColor, lineWidth: 1)
                     )
-                    .shadow(color: shadowColor, radius: isPressed ? 4 : 8, x: 0, y: isPressed ? 2 : 4)
+                    .shadow(
+                        color: shadowColor, radius: isPressed ? 4 : 8, x: 0, y: isPressed ? 2 : 4)
             )
             .scaleEffect(isPressed ? 0.95 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         }
         .buttonStyle(PlainButtonStyle())
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, perform: {}, onPressingChanged: { pressing in
-            isPressed = pressing
-        })
+        .onLongPressGesture(
+            minimumDuration: 0, maximumDistance: .infinity, perform: {},
+            onPressingChanged: { pressing in
+                isPressed = pressing
+            })
     }
-    
+
     private var iconBackgroundGradient: LinearGradient {
         LinearGradient(
             colors: [iconColor, iconColor.opacity(0.7)],
@@ -706,15 +728,15 @@ struct CompactActionCard: View {
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var cardBackgroundColor: Color {
         configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
-    
+
     private var cardBorderColor: Color {
         configuration.theme.effectiveBorderColor(for: colorScheme).opacity(0.15)
     }
-    
+
     private var shadowColor: Color {
         configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
@@ -726,9 +748,9 @@ struct FAQSectionView: View {
     let isSearching: Bool
     @Binding var openFAQIndex: Int?
     @ObservedObject var sdkManager: ResolvedSDKManager
-    
+
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         VStack(spacing: 24) {
             // Section Header
@@ -738,7 +760,7 @@ struct FAQSectionView: View {
                         Text(isSearching ? "Search Results" : "Frequently Asked Questions")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(configuration.theme.textColor)
-                        
+
                         if isSearching {
                             Text("Results for \"\(searchQuery)\"")
                                 .font(.system(size: 14, weight: .medium))
@@ -749,9 +771,9 @@ struct FAQSectionView: View {
                                 .foregroundColor(configuration.theme.secondaryColor)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     if !isSearching && displayFAQs?.isEmpty == false {
                         Text("\(displayFAQs?.count ?? 0)")
                             .font(.system(size: 16, weight: .bold))
@@ -765,7 +787,7 @@ struct FAQSectionView: View {
                     }
                 }
             }
-            
+
             // FAQ Content
             VStack(spacing: 0) {
                 if sdkManager.isLoadingFAQs {
@@ -792,8 +814,8 @@ struct FAQSectionView: View {
                     EmptyStateView(
                         title: isSearching ? "No results found" : "No FAQs available",
                         message: isSearching
-                        ? "No results found for \"\(searchQuery)\". Try adjusting your search terms or browse our knowledge base."
-                        : "No frequently asked questions are available at the moment. Check back later or contact support for assistance.",
+                            ? "No results found for \"\(searchQuery)\". Try adjusting your search terms or browse our knowledge base."
+                            : "No frequently asked questions are available at the moment. Check back later or contact support for assistance.",
                         configuration: configuration
                     )
                     .padding(48)
@@ -806,15 +828,15 @@ struct FAQSectionView: View {
             )
         }
     }
-    
+
     private var displayFAQs: [FAQ]? {
         return isSearching ? sdkManager.searchedFAQs : sdkManager.faqs
     }
-    
+
     private var faqBackgroundColor: Color {
         configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
-    
+
     private var shadowColor: Color {
         configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
@@ -828,7 +850,7 @@ struct FAQItemView: View {
     let isLast: Bool
     let configuration: HelpCenterConfiguration
     let onToggle: () -> Void
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Question Button
@@ -839,13 +861,15 @@ struct FAQItemView: View {
                         Circle()
                             .fill(questionNumberGradient)
                             .frame(width: 32, height: 32)
-                            .shadow(color: configuration.theme.primaryColor.opacity(0.3), radius: 4, x: 0, y: 2)
-                        
+                            .shadow(
+                                color: configuration.theme.primaryColor.opacity(0.3), radius: 4,
+                                x: 0, y: 2)
+
                         Text("\(index + 1)")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
                     }
-                    
+
                     // Question Text
                     VStack(alignment: .leading, spacing: 4) {
                         Text(faq.question)
@@ -853,22 +877,22 @@ struct FAQItemView: View {
                             .foregroundColor(configuration.theme.textColor)
                             .multilineTextAlignment(.leading)
                             .lineLimit(nil)
-                        
+
                         if isOpen {
                             Text("Tap to close")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(configuration.theme.secondaryColor.opacity(0.7))
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     // Expand/Collapse Icon
                     ZStack {
                         Circle()
                             .fill(iconBackgroundColor)
                             .frame(width: 36, height: 36)
-                        
+
                         Image(systemName: "chevron.down")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(configuration.theme.primaryColor)
@@ -885,14 +909,14 @@ struct FAQItemView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
-                                        
+
             // Answer Section
             if isOpen {
                 VStack(alignment: .leading, spacing: 16) {
                     Divider()
                         .background(configuration.theme.borderColor.opacity(0.3))
                         .padding(.horizontal, 20)
-                    
+
                     HStack(alignment: .top, spacing: 16) {
                         // Answer Icon
                         ZStack {
@@ -900,31 +924,33 @@ struct FAQItemView: View {
                                 .fill(answerIconGradient)
                                 .frame(width: 32, height: 32)
                                 .shadow(color: Color.blue.opacity(0.3), radius: 4, x: 0, y: 2)
-                            
+
                             Image(systemName: "lightbulb.fill")
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.white)
                         }
-                        
+
                         // Answer Text
                         Text(faq.answer)
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(configuration.theme.textColor)
                             .lineLimit(nil)
                             .multilineTextAlignment(.leading)
-                        
+
                         Spacer()
                     }
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
                 }
                 .background(answerBackgroundColor)
-                .transition(.asymmetric(
-                    insertion: .opacity.combined(with: .move(edge: .top)).combined(with: .scale(scale: 0.95)),
-                    removal: .opacity.combined(with: .move(edge: .top))
-                ))
+                .transition(
+                    .asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .top)).combined(
+                            with: .scale(scale: 0.95)),
+                        removal: .opacity.combined(with: .move(edge: .top))
+                    ))
             }
-            
+
             // Divider (except for last item)
             if !isLast && !isOpen {
                 Divider()
@@ -935,19 +961,24 @@ struct FAQItemView: View {
         .clipShape(RoundedRectangle(cornerRadius: isOpen ? 20 : 0))
         .overlay(
             RoundedRectangle(cornerRadius: isOpen ? 20 : 0)
-                .stroke(isOpen ? configuration.theme.primaryColor.opacity(0.2) : Color.clear, lineWidth: 1)
+                .stroke(
+                    isOpen ? configuration.theme.primaryColor.opacity(0.2) : Color.clear,
+                    lineWidth: 1
+                )
                 .animation(.easeInOut(duration: 0.3), value: isOpen)
         )
     }
-    
+
     private var questionNumberGradient: LinearGradient {
         LinearGradient(
-            colors: [configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.7)],
+            colors: [
+                configuration.theme.primaryColor, configuration.theme.primaryColor.opacity(0.7),
+            ],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var answerIconGradient: LinearGradient {
         LinearGradient(
             colors: [Color.blue, Color.blue.opacity(0.7)],
@@ -955,24 +986,24 @@ struct FAQItemView: View {
             endPoint: .bottomTrailing
         )
     }
-    
+
     private var iconBackgroundColor: Color {
         configuration.theme.primaryColor.opacity(0.1)
     }
-    
+
     private var questionBackgroundColor: Color {
         if isOpen {
             return configuration.theme.primaryColor.opacity(0.05)
         }
         return Color.clear
     }
-    
+
     private var answerBackgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray6).opacity(0.2)
             : Color(.systemGray6).opacity(0.3)
     }
-    
+
     private var dividerColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray4).opacity(0.3)
@@ -983,20 +1014,20 @@ struct FAQItemView: View {
 // MARK: - FAQ Loading Skeleton
 struct FAQSkeletonView: View {
     let configuration: HelpCenterConfiguration
-    
+
     var body: some View {
         VStack(spacing: 16) {
             ForEach(0..<3, id: \.self) { _ in
                 HStack(spacing: 16) {
                     SkeletonCircle(size: 32)
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         SkeletonLine(width: nil, height: 16)
                         SkeletonLine(width: 200, height: 14)
                     }
-                    
+
                     Spacer()
-                    
+
                     SkeletonCircle(size: 36)
                 }
                 .padding(.horizontal, 20)
@@ -1005,7 +1036,9 @@ struct FAQSkeletonView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 24)
-                .fill(configuration.theme.mode == .dark ? Color(.systemGray6).opacity(0.3) : Color.white)
+                .fill(
+                    configuration.theme.mode == .dark
+                        ? Color(.systemGray6).opacity(0.3) : Color.white)
         )
     }
 }
@@ -1013,14 +1046,14 @@ struct FAQSkeletonView: View {
 // MARK: - Back Navigation
 struct BackNavigationView: View {
     let onBack: () -> Void
-    
+
     var body: some View {
         HStack {
             Button(action: onBack) {
                 HStack(spacing: 8) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 16, weight: .semibold))
-                    
+
                     Text("Back to Help Center")
                         .font(.system(size: 14, weight: .semibold))
                 }
@@ -1036,7 +1069,7 @@ struct BackNavigationView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
-            
+
             Spacer()
         }
         .padding(.vertical, 8)
@@ -1046,12 +1079,12 @@ struct BackNavigationView: View {
 // MARK: - Loading View
 struct LoadingView: View {
     let message: String
-    
+
     var body: some View {
         VStack(spacing: 16) {
             ProgressView()
                 .scaleEffect(1.2)
-            
+
             Text(message)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(Color(.systemGray))
@@ -1064,24 +1097,24 @@ struct EmptyStateView: View {
     let title: String
     let message: String
     let configuration: HelpCenterConfiguration
-    
+
     var body: some View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
                     .fill(Color(.systemGray5).opacity(0.8))
                     .frame(width: 64, height: 64)
-                
+
                 Image(systemName: "questionmark.circle")
                     .font(.system(size: 24, weight: .medium))
                     .foregroundColor(configuration.theme.secondaryColor)
             }
-            
+
             VStack(spacing: 8) {
                 Text(title)
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(configuration.theme.textColor)
-                
+
                 Text(message)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(configuration.theme.secondaryColor)
@@ -1101,13 +1134,15 @@ enum ViewType: Hashable {
 }
 
 #Preview {
-    ResolvedHelpCenterView(configuration: .production(
-        apiKey: "01JWQ9DPSZ2M3HFXTN31FRVFV5",
-//                    baseURL: URL(string: "https://api.example.com")!,
-        customerId: "preview-user",
-        customerEmail: "user@example.com",
-        customerName: "Preview User",
-        theme: .automatic(primaryColor: .blue),
-    ))
+    ResolvedHelpCenterView(
+        configuration: .production(
+            apiKey: "01JWQ9DPSZ2M3HFXTN31FRVFV5",
+            //                    baseURL: URL(string: "https://api.example.com")!,
+            customerId: "preview-user",
+            customerEmail: "user@example.com",
+            customerName: "Preview User",
+            theme: .automatic(primaryColor: .blue),
+        )
+    )
     .previewDisplayName("Light Theme")
 }
