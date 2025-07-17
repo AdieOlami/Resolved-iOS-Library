@@ -22,10 +22,12 @@ public struct ResolvedLibrary {
     ///   - onDismiss: Handle dismiss
     /// - Returns: A SwiftUI view for browsing knowledge base articles
     @MainActor public static func knowledgeBase(configuration: HelpCenterConfiguration, onDismiss: (() -> Void)? = nil) -> some View {
-        NavigationStack {
+        @State var routes = NavigationPath()
+        
+        return NavigationView {
             KnowledgeBaseView(
                 configuration: configuration,
-                routes: .constant(NavigationPath()),
+                routes: $routes,
                 onBack: {
                     onDismiss?()
                 }
@@ -40,11 +42,12 @@ public struct ResolvedLibrary {
     ///   - onDismiss: Handle dismiss
     /// - Returns: A SwiftUI view for managing support tickets
     @MainActor public static func ticketSystem(configuration: HelpCenterConfiguration, userId: String, onDismiss: (() -> Void)? = nil) -> some View {
-        NavigationStack {
+        @State var routes = NavigationPath()
+        return NavigationView {
             TicketSystemView(
                 configuration: configuration,
                 userId: userId,
-                routes: .constant(NavigationPath()),
+                routes: $routes,
                 onBack: {
                     onDismiss?()
                 }
