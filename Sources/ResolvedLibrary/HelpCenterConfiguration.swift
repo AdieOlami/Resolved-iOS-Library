@@ -5,37 +5,37 @@
 //  Created by Olami on 2025-07-13.
 //
 
-import SwiftUI
 import Foundation
+import SwiftUI
 
 // MARK: - Help Center Configuration
 public struct HelpCenterConfiguration {
     // Required
     public let apiKey: String
     public let baseURL: URL
-    
+
     // User Information
     public let customerId: String?
     public let customerEmail: String?
     public let customerName: String?
     public let customerMetadata: [String: Any]?
-    
+
     // Feature Flags
     public let includeKnowledgeBase: Bool
     public let includeTickets: Bool
     public let includeCreateTicket: Bool
     public let includeFAQs: Bool
-    
+
     // Theme
     public let theme: HelpCenterTheme
-    
+
     // Network Configuration
     public let timeoutInterval: TimeInterval
     public let shouldRetry: Bool
     public let maxRetries: Int
     public let enableOfflineQueue: Bool
     public let loggingEnabled: Bool
-    
+
     public init(
         apiKey: String,
         baseURL: URL = URL(string: "https://api.useresolved.com/api/v1/lib")!,
@@ -81,7 +81,7 @@ public struct HelpCenterTheme {
     public let backgroundColor: Color
     public let borderColor: Color
     public let secondaryColor: Color
-    
+
     public init(
         mode: ThemeMode,
         primaryColor: Color,
@@ -97,7 +97,7 @@ public struct HelpCenterTheme {
         self.borderColor = borderColor
         self.secondaryColor = secondaryColor
     }
-    
+
     // Predefined themes
     public static func light(
         primaryColor: Color = .blue,
@@ -115,7 +115,7 @@ public struct HelpCenterTheme {
             secondaryColor: secondaryColor
         )
     }
-    
+
     public static func dark(
         primaryColor: Color = .blue,
         textColor: Color = Color(.label),
@@ -132,7 +132,7 @@ public struct HelpCenterTheme {
             secondaryColor: secondaryColor
         )
     }
-    
+
     public static func custom(
         mode: ThemeMode = .light,
         primaryColor: Color,
@@ -142,7 +142,7 @@ public struct HelpCenterTheme {
         secondaryColor: Color? = nil
     ) -> HelpCenterTheme {
         let baseTheme = mode == .dark ? HelpCenterTheme.dark() : HelpCenterTheme.light()
-        
+
         return HelpCenterTheme(
             mode: mode,
             primaryColor: primaryColor,
@@ -152,10 +152,33 @@ public struct HelpCenterTheme {
             secondaryColor: secondaryColor ?? baseTheme.secondaryColor
         )
     }
+
+    // Automatic theme that adapts to system appearance
+    public static func automatic(
+        primaryColor: Color = .blue,
+        lightTextColor: Color = Color(.label),
+        lightBackgroundColor: Color = Color(.systemBackground),
+        lightBorderColor: Color = Color(.systemGray4),
+        lightSecondaryColor: Color = Color(.secondaryLabel),
+        darkTextColor: Color = Color(.label),
+        darkBackgroundColor: Color = Color(.systemBackground),
+        darkBorderColor: Color = Color(.systemGray4),
+        darkSecondaryColor: Color = Color(.secondaryLabel)
+    ) -> HelpCenterTheme {
+        return HelpCenterTheme(
+            mode: .automatic,
+            primaryColor: primaryColor,
+            textColor: lightTextColor,  // Will be dynamically handled in views
+            backgroundColor: lightBackgroundColor,
+            borderColor: lightBorderColor,
+            secondaryColor: lightSecondaryColor
+        )
+    }
 }
 
 // MARK: - Theme Mode
 public enum ThemeMode {
     case light
     case dark
+    case automatic  // Follows system appearance
 }

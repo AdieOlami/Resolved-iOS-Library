@@ -19,6 +19,7 @@ public struct ResolvedHelpCenterView: View {
     @State private var searchQuery: String = ""
     @State private var isSearching: Bool = false
     @State private var openFAQIndex: Int? = 0
+    @Environment(\.colorScheme) private var colorScheme
     
     // SDK instance
     @StateObject private var sdkManager = ResolvedSDKManager()
@@ -31,7 +32,7 @@ public struct ResolvedHelpCenterView: View {
         NavigationStack(path: $routes) {
             ZStack {
                 // Background
-                configuration.theme.backgroundColor
+                configuration.theme.effectiveBackgroundColor(for: colorScheme)
                     .ignoresSafeArea()
                 
                 if let organization = sdkManager.organization {
@@ -95,6 +96,7 @@ public struct ResolvedHelpCenterView: View {
                 }
             }
         }
+        .preferredColorScheme(configuration.theme.preferredColorScheme)
         .task {
             await setupSDK()
         }
@@ -365,6 +367,7 @@ struct HeroSectionView: View {
     @Binding var searchQuery: String
     @Binding var isSearching: Bool
     let onSearch: () async -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 24) {
@@ -424,6 +427,7 @@ struct ActionCardsView: View {
     let configuration: HelpCenterConfiguration
     let onNavigate: (ViewType) -> Void
     @StateObject private var sdkManager = ResolvedSDKManager()
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 20) {
@@ -432,11 +436,11 @@ struct ActionCardsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("How can we help?")
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(configuration.theme.textColor)
+                        .foregroundColor(configuration.theme.effectiveTextColor(for: colorScheme))
                     
                     Text("Choose from the options below to get the help you need")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(configuration.theme.secondaryColor)
+                        .foregroundColor(configuration.theme.effectiveSecondaryColor(for: colorScheme))
                 }
                 
                 Spacer()
@@ -489,6 +493,7 @@ struct ActionCard: View {
     let iconColor: Color
     let configuration: HelpCenterConfiguration
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
     @State private var isPressed = false
     
@@ -564,21 +569,15 @@ struct ActionCard: View {
     }
     
     private var cardBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
     
     private var cardBorderColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray4).opacity(0.2)
-            : Color(.systemGray4).opacity(0.1)
+        configuration.theme.effectiveBorderColor(for: colorScheme).opacity(0.15)
     }
     
     private var shadowColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.black.opacity(0.3)
-            : Color.black.opacity(0.1)
+        configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
 }
 
@@ -653,6 +652,7 @@ struct CompactActionCard: View {
     let action: () -> Void
     
     @State private var isPressed = false
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         Button(action: action) {
@@ -708,182 +708,17 @@ struct CompactActionCard: View {
     }
     
     private var cardBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
     
     private var cardBorderColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray4).opacity(0.2)
-            : Color(.systemGray4).opacity(0.1)
+        configuration.theme.effectiveBorderColor(for: colorScheme).opacity(0.15)
     }
     
     private var shadowColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.black.opacity(0.3)
-            : Color.black.opacity(0.1)
+        configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
 }
-
-//// MARK: - FAQ Section
-//struct FAQSectionView: View {
-//    let configuration: HelpCenterConfiguration
-//    let searchQuery: String
-//    let isSearching: Bool
-//    @Binding var openFAQIndex: Int?
-//    @ObservedObject var sdkManager: ResolvedSDKManager
-//    
-//    var body: some View {
-//        VStack(spacing: 24) {
-//            Text(isSearching ? "Search Results for \"\(searchQuery)\"" : "Frequently Asked Questions")
-//                .font(.system(size: 32, weight: .black))
-//                .foregroundColor(configuration.theme.textColor)
-//                .multilineTextAlignment(.center)
-//            
-//            VStack(spacing: 0) {
-//                if sdkManager.isLoadingFAQs {
-//                    LoadingView(message: "Loading frequently asked questions...")
-//                        .padding(48)
-//                } else if let faqs = displayFAQs, !faqs.isEmpty {
-//                    ForEach(Array(faqs.enumerated()), id: \.element.id) { index, faq in
-//                        FAQItemView(
-//                            faq: faq,
-//                            isOpen: openFAQIndex == index,
-//                            isLast: index == faqs.count - 1,
-//                            configuration: configuration,
-//                            onToggle: {
-//                                openFAQIndex = openFAQIndex == index ? nil : index
-//                            }
-//                        )
-//                    }
-//                } else {
-//                    EmptyStateView(
-//                        title: isSearching ? "No results found" : "No FAQs available",
-//                        message: isSearching
-//                        ? "No results found for \"\(searchQuery)\". Try adjusting your search terms or browse our knowledge base."
-//                        : "No frequently asked questions are available at the moment. Check back later or contact support for assistance.",
-//                        configuration: configuration
-//                    )
-//                    .padding(48)
-//                }
-//            }
-//            .background(
-//                RoundedRectangle(cornerRadius: 24)
-//                    .fill(faqBackgroundColor)
-//                    .overlay(
-//                        RoundedRectangle(cornerRadius: 24)
-//                            .stroke(faqBorderColor, lineWidth: 1)
-//                    )
-//            )
-//        }
-//        .padding(.horizontal)
-//    }
-//    
-//    private var displayFAQs: [FAQ]? {
-//        return isSearching ? sdkManager.searchedFAQs : sdkManager.faqs
-//    }
-//    
-//    private var faqBackgroundColor: Color {
-//        if configuration.theme.mode == .dark {
-//            return Color(.systemGray6).opacity(0.3)
-//        } else {
-//            return Color.white.opacity(0.7)
-//        }
-//    }
-//    
-//    private var faqBorderColor: Color {
-//        if configuration.theme.mode == .dark {
-//            return Color(.systemGray4).opacity(0.3)
-//        } else {
-//            return Color(.systemGray4).opacity(0.4)
-//        }
-//    }
-//}
-//
-//// MARK: - FAQ Item
-//struct FAQItemView: View {
-//    let faq: FAQ
-//    let isOpen: Bool
-//    let isLast: Bool
-//    let configuration: HelpCenterConfiguration
-//    let onToggle: () -> Void
-//    
-//    var body: some View {
-//        VStack(spacing: 0) {
-//            Button(action: onToggle) {
-//                HStack {
-//                    Text(faq.question)
-//                        .font(.system(size: 16, weight: .bold))
-//                        .foregroundColor(configuration.theme.textColor)
-//                        .multilineTextAlignment(.leading)
-//                        .frame(maxWidth: .infinity, alignment: .leading)
-//                    
-//                    Spacer()
-//                    
-//                    ZStack {
-//                        RoundedRectangle(cornerRadius: 12)
-//                            .fill(iconBackgroundColor)
-//                            .frame(width: 32, height: 32)
-//                        
-//                        Image(systemName: isOpen ? "minus" : "plus")
-//                            .font(.system(size: 16, weight: .semibold))
-//                            .foregroundColor(configuration.theme.primaryColor)
-//                            .rotationEffect(.degrees(isOpen ? 0 : 0))
-//                            .animation(.easeInOut(duration: 0.2), value: isOpen)
-//                    }
-//                }
-//                .padding(.horizontal, 24)
-//                .padding(.vertical, 20)
-//                .background(isOpen ? questionBackgroundColor : Color.clear)
-//            }
-//            .buttonStyle(PlainButtonStyle())
-//            
-//            if isOpen {
-//                Text(faq.answer)
-//                    .font(.system(size: 14, weight: .medium))
-//                    .foregroundColor(configuration.theme.secondaryColor)
-//                    .lineLimit(nil)
-//                    .multilineTextAlignment(.leading)
-//                    .frame(maxWidth: .infinity, alignment: .leading)
-//                    .padding(.horizontal, 24)
-//                    .padding(.bottom, 20)
-//                    .background(answerBackgroundColor)
-//                    .transition(.opacity.combined(with: .move(edge: .top)))
-//                    .animation(.easeInOut(duration: 0.3), value: isOpen)
-//            }
-//            
-//            if !isLast {
-//                Divider()
-//                    .background(dividerColor)
-//            }
-//        }
-//    }
-//    
-//    private var iconBackgroundColor: Color {
-//        configuration.theme.primaryColor.opacity(0.15)
-//    }
-//    
-//    private var questionBackgroundColor: Color {
-//        configuration.theme.primaryColor.opacity(0.05)
-//    }
-//    
-//    private var answerBackgroundColor: Color {
-//        if configuration.theme.mode == .dark {
-//            return Color(.systemGray6).opacity(0.2)
-//        } else {
-//            return Color(.systemGray6).opacity(0.3)
-//        }
-//    }
-//    
-//    private var dividerColor: Color {
-//        if configuration.theme.mode == .dark {
-//            return Color(.systemGray4).opacity(0.3)
-//        } else {
-//            return Color(.systemGray4).opacity(0.4)
-//        }
-//    }
-//}
 
 struct FAQSectionView: View {
     let configuration: HelpCenterConfiguration
@@ -891,6 +726,8 @@ struct FAQSectionView: View {
     let isSearching: Bool
     @Binding var openFAQIndex: Int?
     @ObservedObject var sdkManager: ResolvedSDKManager
+    
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 24) {
@@ -975,15 +812,11 @@ struct FAQSectionView: View {
     }
     
     private var faqBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
     
     private var shadowColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.black.opacity(0.3)
-            : Color.black.opacity(0.1)
+        configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
 }
 
@@ -1274,7 +1107,7 @@ enum ViewType: Hashable {
         customerId: "preview-user",
         customerEmail: "user@example.com",
         customerName: "Preview User",
-        theme: .light(primaryColor: .blue),
+        theme: .automatic(primaryColor: .blue),
     ))
     .previewDisplayName("Light Theme")
 }

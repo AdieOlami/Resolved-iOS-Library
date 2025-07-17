@@ -14,6 +14,7 @@ struct ArticleDetailView: View {
     let articleId: String
     let configuration: HelpCenterConfiguration
     @ObservedObject var sdkManager: ResolvedSDKManager
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         ScrollView {
@@ -153,7 +154,8 @@ struct ArticleDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(configuration.theme.backgroundColor)
+        .background(configuration.theme.effectiveBackgroundColor(for: colorScheme))
+        .preferredColorScheme(configuration.theme.preferredColorScheme)
     }
     
     private func formatDate(_ dateString: String) -> String {
@@ -170,8 +172,6 @@ struct ArticleDetailView: View {
     }
     
     private var metadataBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color(.systemGray6).opacity(0.5)
+        configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.5)
     }
 }

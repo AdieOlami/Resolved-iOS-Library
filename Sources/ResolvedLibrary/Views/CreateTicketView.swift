@@ -24,6 +24,7 @@ struct CreateTicketView: View {
     @State private var isDragOver = false
     @State private var showingFilePicker = false
     @State private var focusedField: FormField?
+    @Environment(\.colorScheme) private var colorScheme
     
     enum FormField: CaseIterable {
         case title, category, priority, description
@@ -53,7 +54,8 @@ struct CreateTicketView: View {
                 .padding(.bottom, 40)
             }
         }
-        .background(configuration.theme.backgroundColor)
+        .background(configuration.theme.effectiveBackgroundColor(for: colorScheme))
+        .preferredColorScheme(configuration.theme.preferredColorScheme)
         .navigationBarHidden(true)
         .onTapGesture {
             hideKeyboard()
@@ -577,27 +579,19 @@ struct CreateTicketView: View {
     
     // MARK: - Color Properties
     private var headerBackgroundColor: Color {
-        configuration.theme.mode == .dark
-        ? Color(.systemBackground)
-        : Color(.systemBackground)
+        configuration.theme.effectiveBackgroundColor(for: colorScheme)
     }
     
     private var cardBackgroundColor: Color {
-        configuration.theme.mode == .dark
-        ? Color(.systemGray6).opacity(0.3)
-        : Color.white
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
     
     private var fieldBackgroundColor: Color {
-        configuration.theme.mode == .dark
-        ? Color(.systemGray5).opacity(0.3)
-        : Color(.systemGray6).opacity(0.3)
+        configuration.theme.adaptiveInputBackground(for: colorScheme)
     }
     
     private var shadowColor: Color {
-        configuration.theme.mode == .dark
-        ? Color.black.opacity(0.3)
-        : Color.black.opacity(0.1)
+        configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
     
     private var iconBackgroundGradient: LinearGradient {
@@ -620,9 +614,7 @@ struct CreateTicketView: View {
         if isDragOver {
             return Color.blue.opacity(0.1)
         }
-        return configuration.theme.mode == .dark
-        ? Color(.systemGray6).opacity(0.2)
-        : Color(.systemGray6).opacity(0.3)
+        return configuration.theme.adaptiveInputBackground(for: colorScheme)
     }
     
     private var uploadBorderColor: Color {
@@ -663,13 +655,14 @@ struct FormFieldView<Content: View>: View {
     let configuration: HelpCenterConfiguration
     let isFocused: Bool
     @ViewBuilder let content: Content
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 6) {
                 Text(title)
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(configuration.theme.textColor)
+                    .foregroundColor(configuration.theme.effectiveTextColor(for: colorScheme))
                 
                 if isRequired {
                     Text("*")
@@ -699,6 +692,7 @@ struct FileItemView: View {
     let file: UploadedFile
     let configuration: HelpCenterConfiguration
     let onRemove: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         HStack(spacing: 16) {
@@ -780,9 +774,7 @@ struct FileItemView: View {
     }
     
     private var fileItemBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.2)
-            : Color(.systemGray6).opacity(0.3)
+        configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.3)
     }
     
     private func formatFileSize(_ bytes: Int64) -> String {
@@ -797,6 +789,7 @@ struct FileItemView: View {
 struct ErrorMessageView: View {
     let message: String
     let configuration: HelpCenterConfiguration
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         HStack(spacing: 16) {
@@ -844,9 +837,7 @@ struct ErrorMessageView: View {
     }
     
     private var errorBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.red.opacity(0.1)
-            : Color.red.opacity(0.05)
+        Color.red.opacity(colorScheme == .dark ? 0.1 : 0.05)
     }
 }
 
@@ -854,6 +845,7 @@ struct ErrorMessageView: View {
 
 struct SuccessMessageView: View {
     let configuration: HelpCenterConfiguration
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         HStack(spacing: 16) {
@@ -901,8 +893,6 @@ struct SuccessMessageView: View {
     }
     
     private var successBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.green.opacity(0.1)
-            : Color.green.opacity(0.05)
+        Color.green.opacity(colorScheme == .dark ? 0.1 : 0.05)
     }
 }

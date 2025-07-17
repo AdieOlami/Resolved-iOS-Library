@@ -18,8 +18,9 @@ struct TicketDetailView: View {
     @Binding var newCommentText: String
     @Binding var isSubmittingComment: Bool
     let onSubmitComment: () async -> Void
-    
+
     @State private var isClosed: Bool = false
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: 0) {
@@ -65,7 +66,8 @@ struct TicketDetailView: View {
                     .padding(32)
             }
         }
-        .background(configuration.theme.backgroundColor)
+        .background(configuration.theme.effectiveBackgroundColor(for: colorScheme))
+        .preferredColorScheme(configuration.theme.preferredColorScheme)
     }
 
     // MARK: - Ticket Header
@@ -288,27 +290,19 @@ struct TicketDetailView: View {
 
     // MARK: - Computed Properties
     private var headerBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.3)
-            : Color(.systemGray6).opacity(0.5)
+        configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.5)
     }
 
     private var tabsBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white.opacity(0.8)
+        configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.8)
     }
 
     private var messageInputBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.3)
-            : Color.white.opacity(0.9)
+        configuration.theme.adaptiveInputBackground(for: colorScheme)
     }
 
     private var messageInputContainerBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.9)
-            : Color.white.opacity(0.95)
+        configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.95)
     }
 
     private var sendButtonBackgroundColor: Color {
@@ -358,6 +352,7 @@ struct TabButton: View {
 struct CategoryBadge: View {
     let category: String
     let configuration: HelpCenterConfiguration
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack(spacing: 4) {
@@ -383,9 +378,7 @@ struct CategoryBadge: View {
     }
 
     private var backgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.3)
-            : Color(.systemGray6).opacity(0.7)
+        configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.7)
     }
 }
 
@@ -394,6 +387,7 @@ struct MessageBubbleView: View {
     let comment: TicketComment
     let configuration: HelpCenterConfiguration
     let isFromCustomer: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         HStack {
@@ -451,9 +445,7 @@ struct MessageBubbleView: View {
         if isFromCustomer {
             return configuration.theme.primaryColor
         } else {
-            return configuration.theme.mode == .dark
-                ? Color(.systemGray5).opacity(0.6)
-                : Color.white.opacity(0.8)
+            return configuration.theme.adaptiveSecondaryButtonBackground(for: colorScheme)
         }
     }
 
@@ -505,6 +497,7 @@ struct ToolButton: View {
     let icon: String
     let configuration: HelpCenterConfiguration
     let action: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: action) {
@@ -525,9 +518,7 @@ struct ToolButton: View {
     }
 
     private var toolButtonBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray5).opacity(0.3)
-            : Color.white.opacity(0.8)
+        configuration.theme.adaptiveSecondaryButtonBackground(for: colorScheme)
     }
 }
 
@@ -591,7 +582,7 @@ struct CloseTicketButton: View {
 
     private func closeTicket() {
         isClosing = true
-        
+
         Task {
             do {
                 _ = try await sdkManager.closeTicket(id: ticketId)

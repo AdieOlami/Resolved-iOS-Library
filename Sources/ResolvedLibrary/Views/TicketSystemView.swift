@@ -21,6 +21,7 @@ struct TicketSystemView: View {
     @State private var activeTab = "conversation"
     @State private var newCommentText = ""
     @State private var isSubmittingComment = false
+    @Environment(\.colorScheme) private var colorScheme
     
     private var filteredTickets: [Ticket] {
         if searchQuery.isEmpty {
@@ -64,7 +65,8 @@ struct TicketSystemView: View {
                 await refreshTickets()
             }
         }
-        .background(configuration.theme.backgroundColor)
+        .background(configuration.theme.effectiveBackgroundColor(for: colorScheme))
+        .preferredColorScheme(configuration.theme.preferredColorScheme)
         .navigationBarHidden(true)
         .navigationDestination(for: String.self) { ticketId in
             TicketDetailView(
@@ -312,16 +314,13 @@ struct TicketSystemView: View {
     }
     
     // MARK: - Computed Properties
+    
     private var headerBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemBackground)
-            : Color(.systemBackground)
+        configuration.theme.effectiveBackgroundColor(for: colorScheme)
     }
     
     private var searchBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color(.systemGray6).opacity(0.8)
+        configuration.theme.adaptiveInputBackground(for: colorScheme)
     }
     
     private var ticketStatusCounts: [(status: String, count: Int)] {
@@ -340,6 +339,7 @@ struct StatusOverviewCard: View {
     let status: String
     let count: Int
     let configuration: HelpCenterConfiguration
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 8) {
@@ -381,17 +381,17 @@ struct StatusOverviewCard: View {
     }
     
     private var cardBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.2)
-            : Color.white.opacity(0.8)
+        configuration.theme.adaptiveCardBackground(for: colorScheme).opacity(0.8)
     }
 }
 
-// MARK: - Ticket Card View
+// MARK: - TicketCardView
+
 struct TicketCardView: View {
     let ticket: Ticket
     let configuration: HelpCenterConfiguration
     let onSelect: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         Button(action: onSelect) {
@@ -474,19 +474,15 @@ struct TicketCardView: View {
     }
     
     private var cardBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
     
     private var cardBorderColor: Color {
-        configuration.theme.borderColor.opacity(0.1)
+        configuration.theme.effectiveBorderColor(for: colorScheme).opacity(0.1)
     }
     
     private var shadowColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.black.opacity(0.3)
-            : Color.black.opacity(0.1)
+        configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
     
     private func formatDate(_ dateString: String) -> String {
@@ -504,7 +500,8 @@ struct TicketCardView: View {
     }
 }
 
-// MARK: - Enhanced Status Badge
+// MARK: - StatusBadge
+
 struct StatusBadge: View {
     let status: TicketStatus
     let configuration: HelpCenterConfiguration
@@ -555,7 +552,8 @@ struct StatusBadge: View {
     }
 }
 
-// MARK: - Priority Indicator
+// MARK: - PriorityIndicator
+
 struct PriorityIndicator: View {
     let priority: TicketPriority
     let configuration: HelpCenterConfiguration
@@ -603,10 +601,12 @@ struct PriorityIndicator: View {
     }
 }
 
-// MARK: - Enhanced Skeleton Ticket Card View
+// MARK: - Skeleton Ticket Card View
 struct SkeletonTicketCardView: View {
     let configuration: HelpCenterConfiguration
     @State private var animationOffset: CGFloat = -200
+    
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 0) {
@@ -649,13 +649,12 @@ struct SkeletonTicketCardView: View {
     }
     
     private var skeletonBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
 }
 
-// MARK: - Skeleton Components
+// MARK: - SkeletonLine
+
 struct SkeletonLine: View {
     let width: CGFloat?
     let height: CGFloat
@@ -735,7 +734,8 @@ struct SkeletonCircle: View {
     }
 }
 
-// MARK: - Priority Badge
+// MARK: - PriorityBadge
+
 struct PriorityBadge: View {
     let priority: TicketPriority
     let configuration: HelpCenterConfiguration

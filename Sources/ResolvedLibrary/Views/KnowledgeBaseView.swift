@@ -670,6 +670,7 @@ struct KnowledgeBaseView: View {
     @State private var selectedArticleId: String?
     @State private var expandedCollections: Set<String> = []
     @State private var showingArticleDetail = false
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 0) {
@@ -827,8 +828,9 @@ struct KnowledgeBaseView: View {
     private var collectionsView: some View {
         Group {
             if sdkManager.isLoadingCollections {
-                LoadingView(message: "Loading collections...")
-                    .padding(40)
+//                LoadingView(message: "Loading collections...")
+//                    .padding(40)
+                loadingCollectionsView
             } else if let error = sdkManager.collectionError {
                 ErrorView(message: error, onRetry: {
                     Task {
@@ -861,6 +863,15 @@ struct KnowledgeBaseView: View {
                 .padding(.top, 20)
             }
         }
+    }
+    
+    private var loadingCollectionsView: some View {
+        LazyVStack(spacing: 16) {
+            ForEach(0..<5, id: \.self) { _ in
+                SkeletonKnowledgeBaseCardView(configuration: configuration)
+            }
+        }
+        .padding(.top, 20)
     }
     
     // MARK: - Search Results
@@ -964,9 +975,56 @@ struct KnowledgeBaseView: View {
     }
     
     private var searchBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color(.systemGray6).opacity(0.8)
+        configuration.theme.adaptiveInputBackground(for: colorScheme)
+    }
+}
+
+// MARK: - Skeleton Ticket Card View
+struct SkeletonKnowledgeBaseCardView: View {
+    let configuration: HelpCenterConfiguration
+    @State private var animationOffset: CGFloat = -200
+    
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                HStack(spacing: 12) {
+                    SkeletonCircle(size: 44)
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        SkeletonLine(width: 80, height: 16)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(spacing: 8) {
+                    SkeletonLine(width: 60, height: 20)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+            
+            // Content
+            VStack(alignment: .leading, spacing: 12) {
+                SkeletonLine(width: nil, height: 18)
+                SkeletonLine(width: 150, height: 14)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(skeletonBackgroundColor)
+        )
+    }
+    
+    private var skeletonBackgroundColor: Color {
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
 }
 
@@ -978,6 +1036,8 @@ struct CollectionCardView: View {
     @Binding var expandedCollections: Set<String>
     let onArticleSelect: (String) -> Void
     let level: Int
+    
+    @Environment(\.colorScheme) private var colorScheme
     
     private var isExpanded: Bool {
         expandedCollections.contains(collection.id)
@@ -1141,9 +1201,7 @@ struct CollectionCardView: View {
         if isExpanded {
             return configuration.theme.primaryColor.opacity(0.05)
         }
-        return configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white
+        return configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
     
     private var cardBorderColor: Color {
@@ -1153,9 +1211,7 @@ struct CollectionCardView: View {
     }
     
     private var shadowColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.black.opacity(0.3)
-            : Color.black.opacity(0.1)
+        configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
 }
 
@@ -1164,6 +1220,8 @@ struct ArticleRowView: View {
     let article: Article
     let configuration: HelpCenterConfiguration
     let onSelect: () -> Void
+    
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         Button(action: onSelect) {
@@ -1229,10 +1287,13 @@ struct ArticleRowView: View {
 }
 
 // MARK: - Search Result Card View
+
 struct SearchResultCardView: View {
     let article: Article
     let configuration: HelpCenterConfiguration
     let onSelect: () -> Void
+    
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         Button(action: onSelect) {
@@ -1291,15 +1352,11 @@ struct SearchResultCardView: View {
     }
     
     private var searchResultBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white
+        configuration.theme.adaptiveCardBackground(for: colorScheme)
     }
     
     private var shadowColor: Color {
-        configuration.theme.mode == .dark
-            ? Color.black.opacity(0.3)
-            : Color.black.opacity(0.1)
+        configuration.theme.adaptiveShadowColor(for: colorScheme)
     }
 }
 
