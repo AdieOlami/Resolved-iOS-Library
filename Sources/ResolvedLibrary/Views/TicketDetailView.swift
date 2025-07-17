@@ -18,6 +18,8 @@ struct TicketDetailView: View {
     @Binding var newCommentText: String
     @Binding var isSubmittingComment: Bool
     let onSubmitComment: () async -> Void
+    
+    @State private var isClosed: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,7 +46,7 @@ struct TicketDetailView: View {
                 }
 
                 // Message input (only for conversation tab)
-                if activeTab == "conversation" {
+                if activeTab == "conversation" && ticket.status != .closed && !isClosed {
                     messageInputView
                 }
             } else if sdkManager.ticketError != nil {
@@ -90,11 +92,12 @@ struct TicketDetailView: View {
                     CategoryBadge(category: ticket.category, configuration: configuration)
 
                     // Close ticket button
-                    if ticket.status != .closed {
+                    if ticket.status != .closed && !isClosed {
                         CloseTicketButton(
                             ticketId: ticket.id,
                             sdkManager: sdkManager,
-                            configuration: configuration
+                            configuration: configuration,
+                            isClosed: $isClosed
                         )
                     }
                 }
@@ -534,6 +537,7 @@ struct CloseTicketButton: View {
     let ticketId: String
     @ObservedObject var sdkManager: ResolvedSDKManager
     let configuration: HelpCenterConfiguration
+    @Binding var isClosed: Bool
 
     @State private var isClosing = false
     @State private var showConfirmation = false
@@ -593,6 +597,7 @@ struct CloseTicketButton: View {
                 _ = try await sdkManager.closeTicket(id: ticketId)
                 await MainActor.run {
                     isClosing = false
+                    isClosed = true
                 }
             } catch {
                 await MainActor.run {
