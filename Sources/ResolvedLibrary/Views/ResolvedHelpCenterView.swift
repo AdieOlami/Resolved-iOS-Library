@@ -302,7 +302,10 @@ public struct ResolvedHelpCenterView: View {
     // MARK: - Helper Methods
     
     private func setupSDK() async {
-        await sdkManager.initialize(with: configuration)
+        if sdkManager.organization == nil {
+            await sdkManager.initialize(with: configuration)
+        }
+        await sdkManager.loadFAQs()
     }
     
     private func handleSearch() async {

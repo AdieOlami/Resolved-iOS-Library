@@ -27,9 +27,9 @@ public class ResolvedSDKManager: ObservableObject {
 
     // Loading States
     @Published public var isLoadingOrganization = false
-    @Published public var isLoadingFAQs = false
-    @Published public var isLoadingTickets = false
-    @Published public var isLoadingCollections = false
+    @Published public var isLoadingFAQs = true
+    @Published public var isLoadingTickets = true
+    @Published public var isLoadingCollections = true
     @Published public var isLoadingArticles = false
 
     // Error States
@@ -64,21 +64,10 @@ public class ResolvedSDKManager: ObservableObject {
         self.sdk = ResolvedSDK(configuration: sdkConfig)
 
         await loadOrganization()
-
-        if configuration.includeFAQs {
-            await loadFAQs()
-        }
-
-        if configuration.includeKnowledgeBase {
-            await loadCollections()
-        }
-
-        if configuration.includeTickets && configuration.customerId != nil {
-            await loadTickets()
-        }
     }
 
     // MARK: - Organization
+    
     public func loadOrganization() async {
         guard let sdk = sdk else { return }
         
@@ -103,8 +92,9 @@ public class ResolvedSDKManager: ObservableObject {
     }
 
     // MARK: - FAQs
+    
     public func loadFAQs() async {
-        guard let sdk = sdk else { return }
+        guard configuration?.includeFAQs == true, let sdk = sdk else { return }
         
         await MainActor.run {
             isLoadingFAQs = true
@@ -151,8 +141,9 @@ public class ResolvedSDKManager: ObservableObject {
     }
 
     // MARK: - Knowledge Base
+    
     public func loadCollections() async {
-        guard let sdk = sdk else { return }
+        guard configuration?.includeKnowledgeBase == true, let sdk = sdk else { return }
 
         await MainActor.run {
             isLoadingCollections = true
@@ -253,7 +244,7 @@ public class ResolvedSDKManager: ObservableObject {
     // MARK: - Tickets
 
     public func loadTickets() async {
-        guard let sdk = sdk, let customerId = configuration?.customerId else { return }
+        guard configuration?.includeTickets == true, let sdk = sdk, let customerId = configuration?.customerId else { return }
         
         await MainActor.run {
             isLoadingTickets = true
@@ -348,9 +339,14 @@ public class ResolvedSDKManager: ObservableObject {
         return updatedTicket
     }
 
-    public func closeTicket(id: String) async throws -> Ticket {
-        let request = UpdateTicketRequest(status: .closed)
-        return try await updateTicket(id: id, request: request)
+    public func closeTicket(id: String) async throws {
+        guard let sdk = sdk else {
+            throw NSError(
+                domain: "ResolvedSDKManager", code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "SDK not initialized"])
+        }
+        
+        return try await sdk.ticketing.closeTicket(id: id)
     }
 
     // MARK: - Helper Methods

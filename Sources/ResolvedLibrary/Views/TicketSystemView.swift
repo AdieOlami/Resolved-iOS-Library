@@ -269,7 +269,10 @@ struct TicketSystemView: View {
             enableOfflineQueue: configuration.enableOfflineQueue,
             loggingEnabled: configuration.loggingEnabled
         )
-        await sdkManager.initialize(with: config)
+        if sdkManager.organization == nil {
+            await sdkManager.initialize(with: config)
+        }
+        await sdkManager.loadTickets()
     }
     
     private func submitComment() async {

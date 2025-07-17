@@ -314,7 +314,7 @@ struct CreateTicketView: View {
             Button("🟢 Low") { formData.priority = "low" }
             Button("🟡 Medium") { formData.priority = "medium" }
             Button("🟠 High") { formData.priority = "high" }
-            Button("🔴 Critical") { formData.priority = "critical" }
+            Button("🔴 Urgent") { formData.priority = "urgent" }
         } label: {
             HStack {
                 Text(priorityDisplayText)
@@ -570,7 +570,7 @@ struct CreateTicketView: View {
         case "low": return "🟢 Low"
         case "medium": return "🟡 Medium"
         case "high": return "🟠 High"
-        case "critical": return "🔴 Critical"
+        case "urgent": return "🔴 Urgent"
         default: return "Select Priority"
         }
     }

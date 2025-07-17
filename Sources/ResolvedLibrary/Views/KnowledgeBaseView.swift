@@ -718,7 +718,10 @@ struct KnowledgeBaseView: View {
             }
         }
         .task {
-            await sdkManager.initialize(with: configuration)
+            if sdkManager.organization == nil {
+                await sdkManager.initialize(with: configuration)
+            }
+            await sdkManager.loadCollections()
         }
     }
     

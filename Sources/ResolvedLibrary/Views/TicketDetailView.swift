@@ -587,7 +587,7 @@ struct CloseTicketButton: View {
 
     private func closeTicket() {
         isClosing = true
-
+        
         Task {
             do {
                 _ = try await sdkManager.closeTicket(id: ticketId)
