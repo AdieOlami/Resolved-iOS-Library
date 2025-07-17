@@ -717,8 +717,8 @@ struct KnowledgeBaseView: View {
                 }
             }
         }
-        .onAppear {
-            sdkManager.initialize(with: configuration)
+        .task {
+            await sdkManager.initialize(with: configuration)
         }
     }
     
@@ -786,9 +786,11 @@ struct KnowledgeBaseView: View {
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(configuration.theme.textColor)
                 .onSubmit {
-                    performSearch()
+                    Task {
+                        await performSearch()
+                    }
                 }
-                .onChange(of: searchQuery) { newValue in
+                .onChange(of: searchQuery) { _, newValue in
                     if newValue.isEmpty {
                         isSearching = false
                     }
@@ -826,7 +828,9 @@ struct KnowledgeBaseView: View {
                     .padding(40)
             } else if let error = sdkManager.collectionError {
                 ErrorView(message: error, onRetry: {
-                    sdkManager.loadCollections()
+                    Task {
+                        await sdkManager.loadCollections()
+                    }
                 })
                 .padding(16)
             } else if sdkManager.collections.isEmpty {
@@ -864,7 +868,9 @@ struct KnowledgeBaseView: View {
                     .padding(40)
             } else if let error = sdkManager.articleError {
                 ErrorView(message: error, onRetry: {
-                    performSearch()
+                    Task {
+                        await performSearch()
+                    }
                 })
                 .padding(16)
             } else if sdkManager.articles.isEmpty {
@@ -913,36 +919,38 @@ struct KnowledgeBaseView: View {
     
     // MARK: - Helper Methods
     
-    @MainActor
     private func refreshKnowledgeBase() async {
         if isSearching {
             await performSearchRefresh()
         } else {
-            sdkManager.loadCollections()
+            await sdkManager.loadCollections()
             while sdkManager.isLoadingCollections {
                 try? await Task.sleep(nanoseconds: 100_000_000)
             }
         }
     }
 
-    @MainActor
     private func performSearchRefresh() async {
         guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        sdkManager.searchArticles(query: searchQuery)
+        await sdkManager.searchArticles(query: searchQuery)
         while sdkManager.isLoadingArticles {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
     }
     
-    private func performSearch() {
+    private func performSearch() async {
         guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            isSearching = false
+            await MainActor.run {
+                isSearching = false
+            }
             return
         }
         
-        isSearching = true
-        sdkManager.searchArticles(query: searchQuery)
+        await MainActor.run {
+            isSearching = true
+        }
+        await sdkManager.searchArticles(query: searchQuery)
     }
     
     // MARK: - Computed Properties
@@ -982,7 +990,9 @@ struct CollectionCardView: View {
                     } else {
                         expandedCollections.insert(collection.id)
                         if collection.articles?.isEmpty == true {
-                            sdkManager.loadArticles(for: collection.id)
+                            Task {
+                                await sdkManager.loadArticles(for: collection.id)
+                            }
                         }
                     }
                 }
@@ -1065,8 +1075,12 @@ struct CollectionCardView: View {
                                     article: article,
                                     configuration: configuration,
                                     onSelect: {
-                                        onArticleSelect(article.id)
-                                        sdkManager.loadArticle(id: article.id)
+                                        Task {
+                                            await MainActor.run {
+                                                onArticleSelect(article.id)
+                                            }
+                                            await sdkManager.loadArticle(id: article.id)
+                                        }
                                     }
                                 )
                             }

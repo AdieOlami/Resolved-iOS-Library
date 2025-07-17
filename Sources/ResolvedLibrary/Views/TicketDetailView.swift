@@ -5,8 +5,8 @@
 //  Created by Olami on 2025-07-13.
 //
 
-import SwiftUI
 @_exported import Resolved
+import SwiftUI
 
 // MARK: - Ticket Detail View
 
@@ -17,8 +17,8 @@ struct TicketDetailView: View {
     @Binding var activeTab: String
     @Binding var newCommentText: String
     @Binding var isSubmittingComment: Bool
-    let onSubmitComment: () -> Void
-    
+    let onSubmitComment: () async -> Void
+
     var body: some View {
         VStack(spacing: 0) {
             if let ticket = sdkManager.selectedTicket {
@@ -27,7 +27,7 @@ struct TicketDetailView: View {
                     ticketHeader(ticket: ticket)
                     tabsView
                 }
-                
+
                 // Content
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -42,7 +42,7 @@ struct TicketDetailView: View {
                 .refreshable {
                     await refreshTicketDetail()
                 }
-                
+
                 // Message input (only for conversation tab)
                 if activeTab == "conversation" {
                     messageInputView
@@ -51,7 +51,9 @@ struct TicketDetailView: View {
                 ErrorView(
                     message: sdkManager.ticketError ?? "Failed to load ticket",
                     onRetry: {
-                        sdkManager.loadTicket(id: ticketId)
+                        Task {
+                            await sdkManager.loadTicket(id: ticketId)
+                        }
                     }
                 )
                 .padding(32)
@@ -63,7 +65,7 @@ struct TicketDetailView: View {
         }
         .background(configuration.theme.backgroundColor)
     }
-    
+
     // MARK: - Ticket Header
     @ViewBuilder
     private func ticketHeader(ticket: Ticket) -> some View {
@@ -73,19 +75,28 @@ struct TicketDetailView: View {
                     Text("#\(ticket.refId)")
                         .font(.system(size: 28, weight: .black))
                         .foregroundColor(configuration.theme.textColor)
-                    
+
                     Text(ticket.title)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(configuration.theme.secondaryColor)
                         .lineLimit(nil)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(spacing: 8) {
                     StatusBadge(status: ticket.status, configuration: configuration)
                     PriorityBadge(priority: ticket.priority, configuration: configuration)
                     CategoryBadge(category: ticket.category, configuration: configuration)
+
+                    // Close ticket button
+                    if ticket.status != .closed {
+                        CloseTicketButton(
+                            ticketId: ticket.id,
+                            sdkManager: sdkManager,
+                            configuration: configuration
+                        )
+                    }
                 }
             }
         }
@@ -98,7 +109,7 @@ struct TicketDetailView: View {
             alignment: .bottom
         )
     }
-    
+
     // MARK: - Tabs View
     private var tabsView: some View {
         HStack(spacing: 0) {
@@ -109,7 +120,7 @@ struct TicketDetailView: View {
             ) {
                 activeTab = "description"
             }
-            
+
             TabButton(
                 title: "Conversation",
                 isActive: activeTab == "conversation",
@@ -117,7 +128,7 @@ struct TicketDetailView: View {
             ) {
                 activeTab = "conversation"
             }
-            
+
             Spacer()
         }
         .background(tabsBackgroundColor)
@@ -128,7 +139,7 @@ struct TicketDetailView: View {
             alignment: .bottom
         )
     }
-    
+
     // MARK: - Description Content
     @ViewBuilder
     private func descriptionContent(ticket: Ticket) -> some View {
@@ -141,7 +152,7 @@ struct TicketDetailView: View {
         }
         .padding(32)
     }
-    
+
     // MARK: - Conversation Content
     @ViewBuilder
     private func conversationContent(ticket: Ticket) -> some View {
@@ -166,13 +177,13 @@ struct TicketDetailView: View {
         .padding(.horizontal, 32)
         .padding(.top, 32)
     }
-    
+
     // MARK: - Message Input View
     private var messageInputView: some View {
         VStack(spacing: 16) {
             Divider()
                 .background(configuration.theme.borderColor)
-            
+
             VStack(spacing: 12) {
                 // Text input
                 ZStack(alignment: .topLeading) {
@@ -183,7 +194,7 @@ struct TicketDetailView: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                     }
-                    
+
                     TextEditor(text: $newCommentText)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(configuration.theme.textColor)
@@ -201,7 +212,7 @@ struct TicketDetailView: View {
                                 .stroke(configuration.theme.borderColor.opacity(0.3), lineWidth: 1)
                         )
                 )
-                
+
                 // Actions
                 HStack {
                     // Tool buttons
@@ -209,20 +220,24 @@ struct TicketDetailView: View {
                         ToolButton(icon: "paperclip", configuration: configuration) {
                             // Handle attachment
                         }
-                        
+
                         ToolButton(icon: "photo", configuration: configuration) {
                             // Handle image
                         }
-                        
+
                         ToolButton(icon: "face.smiling", configuration: configuration) {
                             // Handle emoji
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     // Send button
-                    Button(action: onSubmitComment) {
+                    Button {
+                        Task {
+                            await onSubmitComment()
+                        }
+                    } label: {
                         HStack(spacing: 8) {
                             if isSubmittingComment {
                                 ProgressView()
@@ -230,7 +245,7 @@ struct TicketDetailView: View {
                             } else {
                                 Text("Send")
                                     .font(.system(size: 14, weight: .semibold))
-                                
+
                                 Image(systemName: "paperplane.fill")
                                     .font(.system(size: 14, weight: .semibold))
                             }
@@ -244,7 +259,11 @@ struct TicketDetailView: View {
                         )
                     }
                     .buttonStyle(PlainButtonStyle())
-                    .disabled(isSubmittingComment || newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(
+                        isSubmittingComment
+                            || newCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                                .isEmpty
+                    )
                 }
             }
             .padding(.horizontal, 32)
@@ -252,43 +271,43 @@ struct TicketDetailView: View {
         }
         .background(messageInputContainerBackgroundColor)
     }
-    
+
     @MainActor
     private func refreshTicketDetail() async {
         // Refresh the current ticket details
-        sdkManager.loadTicket(id: ticketId)
-        
+        await sdkManager.loadTicket(id: ticketId)
+
         // Wait for ticket to load
         while sdkManager.selectedTicket == nil && sdkManager.ticketError == nil {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
     }
-    
+
     // MARK: - Computed Properties
     private var headerBackgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray5).opacity(0.3)
             : Color(.systemGray6).opacity(0.5)
     }
-    
+
     private var tabsBackgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray6).opacity(0.3)
             : Color.white.opacity(0.8)
     }
-    
+
     private var messageInputBackgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray5).opacity(0.3)
             : Color.white.opacity(0.9)
     }
-    
+
     private var messageInputContainerBackgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray6).opacity(0.9)
             : Color.white.opacity(0.95)
     }
-    
+
     private var sendButtonBackgroundColor: Color {
         let isEmpty = newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         if isEmpty || isSubmittingComment {
@@ -304,14 +323,16 @@ struct TabButton: View {
     let isActive: Bool
     let configuration: HelpCenterConfiguration
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(isActive ? configuration.theme.primaryColor : configuration.theme.secondaryColor)
-                
+                    .foregroundColor(
+                        isActive
+                            ? configuration.theme.primaryColor : configuration.theme.secondaryColor)
+
                 if isActive {
                     Rectangle()
                         .fill(configuration.theme.primaryColor)
@@ -334,13 +355,13 @@ struct TabButton: View {
 struct CategoryBadge: View {
     let category: String
     let configuration: HelpCenterConfiguration
-    
+
     var body: some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(configuration.theme.secondaryColor)
                 .frame(width: 4, height: 4)
-            
+
             Text(category.capitalized)
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundColor(configuration.theme.textColor)
@@ -357,7 +378,7 @@ struct CategoryBadge: View {
                 )
         )
     }
-    
+
     private var backgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray5).opacity(0.3)
@@ -370,13 +391,13 @@ struct MessageBubbleView: View {
     let comment: TicketComment
     let configuration: HelpCenterConfiguration
     let isFromCustomer: Bool
-    
+
     var body: some View {
         HStack {
             if isFromCustomer {
                 Spacer()
             }
-            
+
             VStack(alignment: isFromCustomer ? .trailing : .leading, spacing: 8) {
                 // Message bubble
                 HStack {
@@ -387,11 +408,13 @@ struct MessageBubbleView: View {
                             configuration: configuration
                         )
                     }
-                    
+
                     VStack(alignment: isFromCustomer ? .trailing : .leading, spacing: 4) {
                         Text(comment.content)
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(isFromCustomer ? .white : configuration.theme.textColor)
+                            .foregroundColor(
+                                isFromCustomer ? .white : configuration.theme.textColor
+                            )
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                             .background(
@@ -399,12 +422,12 @@ struct MessageBubbleView: View {
                                     .fill(bubbleBackgroundColor)
                             )
                             .frame(maxWidth: 280, alignment: isFromCustomer ? .trailing : .leading)
-                        
+
                         Text(formatDate(comment.createdAt))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(configuration.theme.secondaryColor)
                     }
-                    
+
                     if isFromCustomer {
                         AvatarView(
                             name: "You",
@@ -414,13 +437,13 @@ struct MessageBubbleView: View {
                     }
                 }
             }
-            
+
             if !isFromCustomer {
                 Spacer()
             }
         }
     }
-    
+
     private var bubbleBackgroundColor: Color {
         if isFromCustomer {
             return configuration.theme.primaryColor
@@ -430,15 +453,15 @@ struct MessageBubbleView: View {
                 : Color.white.opacity(0.8)
         }
     }
-    
+
     private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
+
         guard let date = formatter.date(from: dateString) else {
             return dateString
         }
-        
+
         let displayFormatter = DateFormatter()
         displayFormatter.timeStyle = .short
         return displayFormatter.string(from: date)
@@ -450,13 +473,13 @@ struct AvatarView: View {
     let name: String
     let isCustomer: Bool
     let configuration: HelpCenterConfiguration
-    
+
     var body: some View {
         ZStack {
             Circle()
                 .fill(avatarBackgroundColor)
                 .frame(width: 40, height: 40)
-            
+
             Text(String(name.prefix(1)).uppercased())
                 .font(.system(size: 16, weight: .bold))
                 .foregroundColor(.white)
@@ -466,9 +489,9 @@ struct AvatarView: View {
                 .stroke(configuration.theme.borderColor.opacity(0.2), lineWidth: 1)
         )
     }
-    
+
     private var avatarBackgroundColor: Color {
-        isCustomer 
+        isCustomer
             ? configuration.theme.primaryColor
             : Color(.systemGray4)
     }
@@ -479,7 +502,7 @@ struct ToolButton: View {
     let icon: String
     let configuration: HelpCenterConfiguration
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
@@ -497,10 +520,87 @@ struct ToolButton: View {
         }
         .buttonStyle(PlainButtonStyle())
     }
-    
+
     private var toolButtonBackgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray5).opacity(0.3)
             : Color.white.opacity(0.8)
+    }
+}
+
+// MARK: - Close Ticket Button
+
+struct CloseTicketButton: View {
+    let ticketId: String
+    @ObservedObject var sdkManager: ResolvedSDKManager
+    let configuration: HelpCenterConfiguration
+
+    @State private var isClosing = false
+    @State private var showConfirmation = false
+    @State private var showErrorAlert = false
+    @State private var errorMessage = ""
+
+    var body: some View {
+        Button(action: {
+            showConfirmation = true
+        }) {
+            HStack(spacing: 4) {
+                if isClosing {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                } else {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+
+                Text("Close")
+                    .font(.system(size: 10, weight: .semibold))
+                    .textCase(.uppercase)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(isClosing ? Color(.systemGray4) : Color(.systemRed))
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(isClosing)
+        .alert("Close Ticket", isPresented: $showConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Close Ticket", role: .destructive) {
+                closeTicket()
+            }
+        } message: {
+            Text("Are you sure you want to close this ticket? This action cannot be undone.")
+        }
+        .alert("Error Closing Ticket", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) {}
+            Button("Try Again") {
+                closeTicket()
+            }
+        } message: {
+            Text(errorMessage)
+        }
+    }
+
+    private func closeTicket() {
+        isClosing = true
+
+        Task {
+            do {
+                _ = try await sdkManager.closeTicket(id: ticketId)
+                await MainActor.run {
+                    isClosing = false
+                }
+            } catch {
+                await MainActor.run {
+                    isClosing = false
+                    errorMessage = error.localizedDescription
+                    showErrorAlert = true
+                }
+            }
+        }
     }
 }

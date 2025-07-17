@@ -131,7 +131,9 @@ struct ArticleDetailView: View {
                     ErrorView(
                         message: sdkManager.articleError ?? "Failed to load article",
                         onRetry: {
-                            sdkManager.loadArticle(id: articleId)
+                            Task {
+                                await sdkManager.loadArticle(id: articleId)
+                            }
                         }
                     )
                     

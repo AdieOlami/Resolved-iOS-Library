@@ -13,14 +13,12 @@ let package = Package(
         ),
     ],
     dependencies: [
-//        .package(url: "https://github.com/facebook/lexical-ios", from: "0.2.0")
     ],
     targets: [
         .target(
             name: "ResolvedLibrary",
             dependencies: [
                 "Resolved",
-//                .product(name: "Lexical", package: "lexical-ios")
             ],
             path: "./Sources/ResolvedLibrary"
         ),

@@ -58,8 +58,8 @@ struct CreateTicketView: View {
         .onTapGesture {
             hideKeyboard()
         }
-        .onAppear {
-            setupSDK()
+        .task {
+            await setupSDK()
         }
     }
     
@@ -460,7 +460,7 @@ struct CreateTicketView: View {
     }
     
     // MARK: - Helper Methods
-    private func setupSDK() {
+    private func setupSDK() async {
         var config = configuration
         config = HelpCenterConfiguration(
             apiKey: configuration.apiKey,
@@ -480,7 +480,8 @@ struct CreateTicketView: View {
             enableOfflineQueue: configuration.enableOfflineQueue,
             loggingEnabled: configuration.loggingEnabled
         )
-        sdkManager.initialize(with: config)
+        
+        await sdkManager.initialize(with: config)
     }
     
     private func submitTicket() {

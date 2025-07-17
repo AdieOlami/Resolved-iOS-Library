@@ -95,8 +95,8 @@ public struct ResolvedHelpCenterView: View {
                 }
             }
         }
-        .onAppear {
-            setupSDK()
+        .task {
+            await setupSDK()
         }
     }
     
@@ -117,9 +117,7 @@ public struct ResolvedHelpCenterView: View {
                     ActionCardsView(
                         configuration: configuration,
                         onNavigate: { view in
-//                            activeView = view
                             routes.append(view)
-//                            routes.append(ViewType.knowledgeBase)
                         }
                     )
 //                }
@@ -289,7 +287,7 @@ public struct ResolvedHelpCenterView: View {
         sdkManager.clearErrors()
         
         // Reload organization data
-        sdkManager.loadOrganization()
+        await sdkManager.loadOrganization()
         
         // Wait for the operation to complete
         while sdkManager.isLoadingOrganization {
@@ -302,28 +300,33 @@ public struct ResolvedHelpCenterView: View {
     }
     
     // MARK: - Helper Methods
-    private func setupSDK() {
-        sdkManager.initialize(with: configuration)
+    
+    private func setupSDK() async {
+        await sdkManager.initialize(with: configuration)
     }
     
-    private func handleSearch() {
+    private func handleSearch() async {
         guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            isSearching = false
+            await MainActor.run {
+                isSearching = false
+            }
             return
         }
         
-        isSearching = true
-        sdkManager.searchFAQs(query: searchQuery)
+        await MainActor.run {
+            isSearching = true
+        }
+        
+        await sdkManager.searchFAQs(query: searchQuery)
     }
     
-    @MainActor
     private func refreshMainContent() async {
         // Refresh organization capabilities
-        sdkManager.loadOrganization()
+        await sdkManager.loadOrganization()
         
         // Refresh FAQs
         if configuration.includeFAQs {
-            sdkManager.loadFAQs()
+            await sdkManager.loadFAQs()
         }
         
         // Wait for completion
@@ -353,11 +356,12 @@ public struct ResolvedHelpCenterView: View {
 }
 
 // MARK: - Hero Section
+
 struct HeroSectionView: View {
     let configuration: HelpCenterConfiguration
     @Binding var searchQuery: String
     @Binding var isSearching: Bool
-    let onSearch: () -> Void
+    let onSearch: () async -> Void
     
     var body: some View {
         VStack(spacing: 24) {
@@ -385,7 +389,9 @@ struct HeroSectionView: View {
                     .foregroundColor(.white)
                     .font(.system(size: 16, weight: .medium))
                     .onSubmit {
-                        onSearch()
+                        Task {
+                            await onSearch()
+                        }
                     }
             }
             .padding(.horizontal, 20)

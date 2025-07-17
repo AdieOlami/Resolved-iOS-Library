@@ -17,7 +17,6 @@ struct TicketSystemView: View {
     let onBack: () -> Void
     
     @StateObject private var sdkManager = ResolvedSDKManager()
-    @State private var selectedTicketId: String?
     @State private var searchQuery = ""
     @State private var activeTab = "conversation"
     @State private var newCommentText = ""
@@ -47,7 +46,9 @@ struct TicketSystemView: View {
                         loadingTicketsView
                     } else if let error = sdkManager.ticketError {
                         ErrorView(message: error, onRetry: {
-                            sdkManager.loadTickets()
+                            Task {
+                                await sdkManager.loadTickets()
+                            }
                         })
                         .padding(16)
                     } else if filteredTickets.isEmpty {
@@ -92,8 +93,8 @@ struct TicketSystemView: View {
                 }
             }
         }
-        .onAppear {
-            setupSDK()
+        .task {
+            await setupSDK()
         }
     }
     
@@ -234,8 +235,12 @@ struct TicketSystemView: View {
                     ticket: ticket,
                     configuration: configuration,
                     onSelect: {
-                        routes.append(ticket.id)
-                        sdkManager.loadTicket(id: ticket.id)
+                        Task {
+                            await MainActor.run {
+                                routes.append(ticket.id)
+                            }
+                            await sdkManager.loadTicket(id: ticket.id)
+                        }
                     }
                 )
             }
@@ -244,7 +249,7 @@ struct TicketSystemView: View {
     }
     
     // MARK: - Helper Methods
-    private func setupSDK() {
+    private func setupSDK() async {
         var config = configuration
         config = HelpCenterConfiguration(
             apiKey: configuration.apiKey,
@@ -264,39 +269,39 @@ struct TicketSystemView: View {
             enableOfflineQueue: configuration.enableOfflineQueue,
             loggingEnabled: configuration.loggingEnabled
         )
-        sdkManager.initialize(with: config)
+        await sdkManager.initialize(with: config)
     }
     
-    private func submitComment() {
+    private func submitComment() async {
         guard !newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let ticketId = selectedTicketId else { return }
+              let ticketId = sdkManager.selectedTicket?.id else { return }
         
-        isSubmittingComment = true
+        await MainActor.run {
+            isSubmittingComment = true
+        }
         
-        Task {
-            do {
-                _ = try await sdkManager.addComment(
-                    to: ticketId,
-                    content: newCommentText,
-                    senderId: userId
-                )
-                
-                await MainActor.run {
-                    newCommentText = ""
-                    isSubmittingComment = false
-                    sdkManager.loadTicket(id: ticketId)
-                }
-            } catch {
-                await MainActor.run {
-                    isSubmittingComment = false
-                }
+        do {
+            _ = try await sdkManager.addComment(
+                to: ticketId,
+                content: newCommentText,
+                senderId: userId
+            )
+            
+            await MainActor.run {
+                newCommentText = ""
+                isSubmittingComment = false
+            }
+            
+            await sdkManager.loadTicket(id: ticketId)
+        } catch {
+            await MainActor.run {
+                isSubmittingComment = false
             }
         }
     }
     
-    @MainActor
     private func refreshTickets() async {
-        sdkManager.loadTickets()
+        await sdkManager.loadTickets()
         
         while sdkManager.isLoadingTickets {
             try? await Task.sleep(nanoseconds: 100_000_000)
