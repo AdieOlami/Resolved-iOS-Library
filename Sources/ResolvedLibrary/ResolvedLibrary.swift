@@ -22,17 +22,10 @@ public struct ResolvedLibrary {
     ///   - onDismiss: Handle dismiss
     /// - Returns: A SwiftUI view for browsing knowledge base articles
     @MainActor public static func knowledgeBase(configuration: HelpCenterConfiguration, onDismiss: (() -> Void)? = nil) -> some View {
-        @State var routes = NavigationPath()
-        
-        return NavigationView {
-            KnowledgeBaseView(
-                configuration: configuration,
-                routes: $routes,
-                onBack: {
-                    onDismiss?()
-                }
-            )
-        }
+        KnowledgeBaseWrapper(
+            configuration: configuration,
+            onDismiss: onDismiss
+        )
     }
     
     /// Creates a standalone Ticket System view
@@ -41,18 +34,16 @@ public struct ResolvedLibrary {
     ///   - userId: The user ID for fetching tickets
     ///   - onDismiss: Handle dismiss
     /// - Returns: A SwiftUI view for managing support tickets
-    @MainActor public static func ticketSystem(configuration: HelpCenterConfiguration, userId: String, onDismiss: (() -> Void)? = nil) -> some View {
-        @State var routes = NavigationPath()
-        return NavigationView {
-            TicketSystemView(
-                configuration: configuration,
-                userId: userId,
-                routes: $routes,
-                onBack: {
-                    onDismiss?()
-                }
-            )
-        }
+    @MainActor public static func ticketSystem(
+        configuration: HelpCenterConfiguration,
+        userId: String,
+        onDismiss: (() -> Void)? = nil
+    ) -> some View {
+        TicketSystemViewWrapper(
+            configuration: configuration,
+            userId: userId,
+            onDismiss: onDismiss
+        )
     }
     
     /// Creates a standalone Create Ticket view
@@ -188,6 +179,18 @@ public struct ResolvedLibrary_Previews: PreviewProvider {
                 )
             )
             .previewDisplayName("Light Theme")
+            
+            ResolvedLibrary.knowledgeBase(
+                configuration: .production(
+                    apiKey: "01JWQ9DPSZ2M3HFXTN31FRVFV5",
+            //                    baseURL: URL(string: "https://api.example.com")!,
+                    customerId: "preview-user",
+                    customerEmail: "user@example.com",
+                    customerName: "Preview User",
+                    theme: .light(primaryColor: .blue),
+                )
+            )
+            .previewDisplayName("KnowledgeBase")
             
             // Dark Theme Preview
             ResolvedLibrary.helpCenter(

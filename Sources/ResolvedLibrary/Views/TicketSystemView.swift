@@ -340,6 +340,30 @@ struct TicketSystemView: View {
     }
 }
 
+// MARK: - TicketSystemViewWrapper
+
+struct TicketSystemViewWrapper: View {
+    let configuration: HelpCenterConfiguration
+    let userId: String
+    let onDismiss: (() -> Void)?
+    
+    @State private var routes = NavigationPath()
+    
+    var body: some View {
+        NavigationStack(path: $routes) {
+            TicketSystemView(
+                configuration: configuration,
+                userId: userId,
+                routes: $routes,
+                onBack: {
+                    onDismiss?()
+                }
+            )
+        }
+        .animation(nil)
+    }
+}
+
 // MARK: - Status Overview Card
 struct StatusOverviewCard: View {
     let status: String
