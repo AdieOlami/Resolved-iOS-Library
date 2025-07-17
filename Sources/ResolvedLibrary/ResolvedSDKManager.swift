@@ -86,7 +86,6 @@ public class ResolvedSDKManager: ObservableObject {
             await MainActor.run {
                 self.organizationError = error.localizedDescription
                 self.isLoadingOrganization = false
-                fatalError("\(error)")
             }
         }
     }
@@ -118,7 +117,6 @@ public class ResolvedSDKManager: ObservableObject {
             await MainActor.run {
                 self.faqError = error.localizedDescription
                 self.isLoadingFAQs = false
-                fatalError("\(error)")
             }
         }
     }
@@ -162,7 +160,6 @@ public class ResolvedSDKManager: ObservableObject {
                 await MainActor.run {
                     self.collectionError = error.localizedDescription
                     self.isLoadingCollections = false
-                    fatalError("\(error)")
                 }
             }
     }
@@ -191,7 +188,6 @@ public class ResolvedSDKManager: ObservableObject {
             await MainActor.run {
                 self.articleError = error.localizedDescription
                 self.isLoadingArticles = false
-                fatalError("\(error)")
             }
         }
     }
@@ -207,7 +203,6 @@ public class ResolvedSDKManager: ObservableObject {
         } catch {
             await MainActor.run {
                 self.articleError = error.localizedDescription
-                fatalError("\(error)")
             }
         }
     }
@@ -236,7 +231,6 @@ public class ResolvedSDKManager: ObservableObject {
             await MainActor.run {
                 self.articleError = error.localizedDescription
                 self.isLoadingArticles = false
-                fatalError("\(error)")
             }
         }
     }
