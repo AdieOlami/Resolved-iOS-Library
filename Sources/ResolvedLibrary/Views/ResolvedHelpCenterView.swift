@@ -8,7 +8,8 @@
 @_exported import Resolved
 import SwiftUI
 
-// MARK: - Main Help Center View
+// MARK: - ResolvedHelpCenterView
+
 public struct ResolvedHelpCenterView: View {
     // Configuration
     public let configuration: HelpCenterConfiguration
@@ -115,14 +116,15 @@ public struct ResolvedHelpCenterView: View {
                 )
 
                 // Action Cards
-                //                if shouldShowActionCards {
-                ActionCardsView(
-                    configuration: configuration,
-                    onNavigate: { view in
-                        routes.append(view)
-                    }
-                )
-                //                }
+                if shouldShowActionCards {
+                    ActionCardsView(
+                        configuration: configuration,
+                        organization: sdkManager.organization,
+                        onNavigate: { view in
+                            routes.append(view)
+                        }
+                    )
+                }
 
                 // FAQ Section
                 if configuration.includeFAQs
@@ -280,9 +282,12 @@ public struct ResolvedHelpCenterView: View {
     }
 
     private var shouldShowActionCards: Bool {
-        let hasKB = sdkManager.organization?.capabilities.contains("use_knowledgebase") == true
-        let hasTickets = sdkManager.organization?.capabilities.contains("use_tickets") == true
-        let hasCreate = sdkManager.organization?.capabilities.contains("use_tickets") == true
+        let hasKB = configuration.includeKnowledgeBase
+        && sdkManager.organization?.capabilities.contains("use_knowledgebase") == true
+        let hasTickets = configuration.includeTickets
+        && sdkManager.organization?.capabilities.contains("use_tickets") == true
+        let hasCreate = configuration.includeCreateTicket
+        && sdkManager.organization?.capabilities.contains("use_tickets") == true
 
         return hasKB || hasTickets || hasCreate
     }
@@ -435,8 +440,8 @@ struct HeroSectionView: View {
 
 struct ActionCardsView: View {
     let configuration: HelpCenterConfiguration
+    let organization: Organization?
     let onNavigate: (ViewType) -> Void
-    @StateObject private var sdkManager = ResolvedSDKManager()
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -460,39 +465,45 @@ struct ActionCardsView: View {
             // Action Cards - Vertical Stack for Portrait
             VStack(spacing: 16) {
                 // Knowledge Base Card
-                ActionCard(
-                    icon: "lightbulb.fill",
-                    title: "Knowledge Base",
-                    description:
-                        "Explore our comprehensive collection of guides, tutorials, and documentation to find instant answers.",
-                    iconColor: .orange,
-                    configuration: configuration
-                ) {
-                    onNavigate(.knowledgeBase)
+                if configuration.includeKnowledgeBase && organization?.capabilities.contains("use_knowledgebase") == true {
+                    ActionCard(
+                        icon: "lightbulb.fill",
+                        title: "Knowledge Base",
+                        description:
+                            "Explore our comprehensive collection of guides, tutorials, and documentation to find instant answers.",
+                        iconColor: .orange,
+                        configuration: configuration
+                    ) {
+                        onNavigate(.knowledgeBase)
+                    }
                 }
 
-                // Create Ticket Card
-                ActionCard(
-                    icon: "paperplane.fill",
-                    title: "Get Support",
-                    description:
-                        "Need personalized assistance? Submit a support ticket and our expert team will help you promptly.",
-                    iconColor: .blue,
-                    configuration: configuration
-                ) {
-                    onNavigate(.createTicket)
+                if configuration.includeTickets && organization?.capabilities.contains("use_tickets") == true {
+                    // Create Ticket Card
+                    ActionCard(
+                        icon: "paperplane.fill",
+                        title: "Get Support",
+                        description:
+                            "Need personalized assistance? Submit a support ticket and our expert team will help you promptly.",
+                        iconColor: .blue,
+                        configuration: configuration
+                    ) {
+                        onNavigate(.createTicket)
+                    }
                 }
-
-                // Your Tickets Card
-                ActionCard(
-                    icon: "ticket.fill",
-                    title: "Your Tickets",
-                    description:
-                        "Track the progress of your support requests and communicate with our support team.",
-                    iconColor: .green,
-                    configuration: configuration
-                ) {
-                    onNavigate(.tickets)
+                
+                if configuration.includeCreateTicket && organization?.capabilities.contains("use_tickets") == true {
+                    // Your Tickets Card
+                    ActionCard(
+                        icon: "ticket.fill",
+                        title: "Your Tickets",
+                        description:
+                            "Track the progress of your support requests and communicate with our support team.",
+                        iconColor: .green,
+                        configuration: configuration
+                    ) {
+                        onNavigate(.tickets)
+                    }
                 }
             }
         }
@@ -1043,39 +1054,6 @@ struct FAQSkeletonView: View {
     }
 }
 
-// MARK: - Back Navigation
-struct BackNavigationView: View {
-    let onBack: () -> Void
-
-    var body: some View {
-        HStack {
-            Button(action: onBack) {
-                HStack(spacing: 8) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-
-                    Text("Back to Help Center")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.systemGray6).opacity(0.8))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color(.systemGray4).opacity(0.4), lineWidth: 1)
-                        )
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            Spacer()
-        }
-        .padding(.vertical, 8)
-    }
-}
-
 // MARK: - Loading View
 struct LoadingView: View {
     let message: String
@@ -1141,6 +1119,10 @@ enum ViewType: Hashable {
             customerId: "preview-user",
             customerEmail: "user@example.com",
             customerName: "Preview User",
+            includeKnowledgeBase: true,
+            includeTickets: false,
+            includeCreateTicket: false,
+            includeFAQs: false,
             theme: .automatic(primaryColor: .blue),
         )
     )

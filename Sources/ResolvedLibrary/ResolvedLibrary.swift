@@ -80,6 +80,10 @@ public extension HelpCenterConfiguration {
         customerId: String? = nil,
         customerEmail: String? = nil,
         customerName: String? = nil,
+        includeKnowledgeBase: Bool = true,
+        includeTickets: Bool = true,
+        includeCreateTicket: Bool = true,
+        includeFAQs: Bool = true,
         theme: HelpCenterTheme = .light()
     ) -> HelpCenterConfiguration {
         return HelpCenterConfiguration(
@@ -88,7 +92,10 @@ public extension HelpCenterConfiguration {
             customerId: customerId,
             customerEmail: customerEmail,
             customerName: customerName,
-            includeKnowledgeBase: true,
+            includeKnowledgeBase: includeKnowledgeBase,
+            includeTickets: includeTickets,
+            includeCreateTicket: includeCreateTicket,
+            includeFAQs: includeFAQs,
             theme: theme
         )
     }
