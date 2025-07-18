@@ -13,6 +13,7 @@ import SwiftUI
 public struct ResolvedHelpCenterView: View {
     // Configuration
     public let configuration: HelpCenterConfiguration
+    public let onBack: (() -> Void)?
 
     // Internal state
     @State private var routes = NavigationPath()
@@ -20,13 +21,14 @@ public struct ResolvedHelpCenterView: View {
     @State private var searchQuery: String = ""
     @State private var isSearching: Bool = false
     @State private var openFAQIndex: Int? = 0
+    @State private var retryCount: Int = 0
     @Environment(\.colorScheme) private var colorScheme
 
-    // SDK instance
     @StateObject private var sdkManager = ResolvedSDKManager()
 
-    public init(configuration: HelpCenterConfiguration) {
+    public init(configuration: HelpCenterConfiguration, onBack: (() -> Void)? = nil) {
         self.configuration = configuration
+        self.onBack = onBack
     }
 
     public var body: some View {
@@ -35,35 +37,40 @@ public struct ResolvedHelpCenterView: View {
                 // Background
                 configuration.theme.effectiveBackgroundColor(for: colorScheme)
                     .ignoresSafeArea()
-
-                if let organization = sdkManager.organization {
-                    if organization.capabilities.contains("use_sdk") {
-                        // Normal help center content
-                        VStack(spacing: 0) {
-                            // Main content
-                            ScrollView {
-                                homeView
+                
+                VStack {
+                    headerView
+                    if let organization = sdkManager.organization {
+                        if organization.capabilities.contains("use_sdk") {
+                            // Normal help center content
+                            VStack(spacing: 0) {
+                                // Main content
+                                ScrollView {
+                                    homeView
+                                }
+                            }
+                        } else {
+                            // Service Unavailable with Pull-to-Refresh
+                            serviceUnavailableView
+                        }
+                    } else if sdkManager.isLoadingOrganization {
+                        // Loading organization capabilities
+                        LoadingView(message: "Loading...")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        // Error loading organization or no organization data
+                        ScrollView {
+                            VStack(spacing: 20) {
+                                serviceUnavailableContent
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding()
+                        }
+                        .refreshable {
+                            if retryCount < 3 {
+                                await refreshOrganizationCapabilities()
                             }
                         }
-                    } else {
-                        // Service Unavailable with Pull-to-Refresh
-                        serviceUnavailableView
-                    }
-                } else if sdkManager.isLoadingOrganization {
-                    // Loading organization capabilities
-                    LoadingView(message: "Loading...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    // Error loading organization or no organization data
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            serviceUnavailableContent
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding()
-                    }
-                    .refreshable {
-                        await refreshOrganizationCapabilities()
                     }
                 }
             }
@@ -102,11 +109,42 @@ public struct ResolvedHelpCenterView: View {
             await setupSDK()
         }
     }
+    
+    // MARK: - HeaderView
+    
+    private var headerView: some View {
+        VStack(spacing: 0) {
+            // Top section with title and stats
+            HStack {
+                Spacer()
 
-    // MARK: - Home View
+                // Back button
+                Button(action: {
+                    onBack?()
+                }) {
+                    ZStack {
+                        Circle()
+                            .fill(configuration.theme.primaryColor.opacity(0.1))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(configuration.theme.primaryColor)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+        }
+        .background(headerBackgroundColor)
+    }
+
+    // MARK: - HomeView
+    
     private var homeView: some View {
         ScrollView {
-            VStack(spacing: 32) {
+            VStack(spacing: 0) {
                 // Hero Section
                 HeroSectionView(
                     configuration: configuration,
@@ -114,6 +152,7 @@ public struct ResolvedHelpCenterView: View {
                     isSearching: $isSearching,
                     onSearch: handleSearch
                 )
+                .padding(.bottom, 32)
 
                 // Action Cards
                 if shouldShowActionCards {
@@ -124,6 +163,7 @@ public struct ResolvedHelpCenterView: View {
                             routes.append(view)
                         }
                     )
+                    .padding(.bottom, 32)
                 }
 
                 // FAQ Section
@@ -137,6 +177,7 @@ public struct ResolvedHelpCenterView: View {
                         openFAQIndex: $openFAQIndex,
                         sdkManager: sdkManager
                     )
+                    .padding(.bottom, 32)
                 }
             }
             .padding(.horizontal)
@@ -156,10 +197,12 @@ public struct ResolvedHelpCenterView: View {
             .padding()
         }
         .refreshable {
-            await refreshOrganizationCapabilities()
+            if retryCount < 3 {
+                await refreshOrganizationCapabilities()
+            }
         }
     }
-
+    
     private var serviceUnavailableContent: some View {
         VStack(spacing: 24) {
             // Error Icon
@@ -229,45 +272,48 @@ public struct ResolvedHelpCenterView: View {
                 }
 
                 // Retry Button
-                Button(action: {
-                    Task {
-                        await refreshOrganizationCapabilities()
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        if sdkManager.isLoadingOrganization {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            Image(systemName: "arrow.clockwise")
-                                .font(.system(size: 14, weight: .semibold))
+                if retryCount < 3 {
+                    Button(action: {
+                        retryCount += 1
+                        Task {
+                            await refreshOrganizationCapabilities()
                         }
-
-                        Text(sdkManager.isLoadingOrganization ? "Checking..." : "Try Again")
-                            .font(.system(size: 16, weight: .semibold))
+                    }) {
+                        HStack(spacing: 8) {
+                            if sdkManager.isLoadingOrganization {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            
+                            Text(sdkManager.isLoadingOrganization ? "Checking..." : "Try Again")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(configuration.theme.primaryColor)
+                        )
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(configuration.theme.primaryColor)
-                    )
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(sdkManager.isLoadingOrganization)
+                    
+                    // Pull to refresh hint
+                    VStack(spacing: 4) {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 12))
+                            .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
+                        
+                        Text("Pull down to refresh")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
+                    }
+                    .padding(.top, 16)
                 }
-                .buttonStyle(PlainButtonStyle())
-                .disabled(sdkManager.isLoadingOrganization)
-
-                // Pull to refresh hint
-                VStack(spacing: 4) {
-                    Image(systemName: "arrow.down")
-                        .font(.system(size: 12))
-                        .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
-
-                    Text("Pull down to refresh")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(configuration.theme.secondaryColor.opacity(0.6))
-                }
-                .padding(.top, 16)
             }
         }
         .padding(32)
@@ -358,15 +404,17 @@ public struct ResolvedHelpCenterView: View {
     }
 
     private var unavailableBackgroundColor: Color {
-        configuration.theme.mode == .dark
-            ? Color(.systemGray6).opacity(0.3)
-            : Color.white.opacity(0.8)
+        configuration.theme.adaptiveSecondaryButtonBackground(for: colorScheme)
     }
 
     private var statusBackgroundColor: Color {
         configuration.theme.mode == .dark
             ? Color(.systemGray5).opacity(0.3)
             : Color(.systemGray6).opacity(0.5)
+    }
+    
+    private var headerBackgroundColor: Color {
+        configuration.theme.effectiveBackgroundColor(for: colorScheme)
     }
 }
 
@@ -383,7 +431,7 @@ struct HeroSectionView: View {
         VStack(spacing: 24) {
             VStack(spacing: 16) {
                 Text("Help Center")
-                    .font(.system(size: 42, weight: .black, design: .default))
+                    .font(.system(size: 32, weight: .black, design: .default))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
 

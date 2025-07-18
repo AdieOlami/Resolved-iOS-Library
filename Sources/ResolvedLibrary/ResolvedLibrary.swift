@@ -12,8 +12,8 @@ public struct ResolvedLibrary {
     /// Creates a SwiftUI Help Center view with the provided configuration
     /// - Parameter configuration: Configuration settings for the Help Center
     /// - Returns: A SwiftUI view that can be embedded in your app
-    @MainActor public static func helpCenter(configuration: HelpCenterConfiguration) -> some View {
-        ResolvedHelpCenterView(configuration: configuration)
+    @MainActor public static func helpCenter(configuration: HelpCenterConfiguration, onDismiss: (() -> Void)? = nil) -> some View {
+        ResolvedHelpCenterView(configuration: configuration, onBack: onDismiss)
     }
     
     /// Creates a standalone Knowledge Base view
